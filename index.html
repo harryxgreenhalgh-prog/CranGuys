@@ -434,6 +434,10 @@ kbd { background: #fff; border: 2px solid var(--ink); border-bottom-width: 4px; 
 }
 @media (max-height: 620px) and (min-width: 560px) { .sf-list { display: grid; grid-template-columns: 1fr 1fr; } }
 
+/* iPad Safari won't let you type into a field that inherits user-select:none — re-enable it for every input */
+input, textarea, select, [contenteditable] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; touch-action: manipulation; }
+textarea.field { resize: none; font-family: ui-monospace, Menlo, monospace; font-size: 13px; padding: 8px; border-radius: 12px; border: 3px solid var(--ink); word-break: break-all; }
+
 </style>
 </head>
 <body>
@@ -471,7 +475,7 @@ kbd { background: #fff; border: 2px solid var(--ink); border-bottom-width: 4px; 
     </div>
     <div class="playwrap">
       <div class="mode-toggle"><button data-mode="offline"><i class="fa-solid fa-robot"></i> Solo</button><button data-mode="online" class="on"><i class="fa-solid fa-globe"></i> Online</button><button data-mode="friends"><i class="fa-solid fa-users"></i> Friends</button></div>
-      <div class="room-join hide" id="roomJoin"><input id="roomIn" maxlength="5" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Room code"><button class="btn small" id="joinBtn"><i class="fa-solid fa-right-to-bracket"></i> Join</button></div>
+      <div class="room-join hide" id="roomJoin"><input id="roomIn" type="text" maxlength="5" placeholder="ROOM CODE" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-label="Room code"><button class="btn small" id="joinBtn"><i class="fa-solid fa-right-to-bracket"></i> Join</button></div>
       <button id="playBtn" class="playbtn"><span class="pb-main">PLAY</span><span class="pb-sub"><i class="dot"></i><span class="pb-status">Connecting…</span></span></button>
       <button id="cancelBtn" class="btn small ghost hide"><i class="fa-solid fa-xmark"></i> Cancel</button>
     </div>
@@ -3492,14 +3496,18 @@ class UI {
     $('#playBtn').addEventListener('click', () => this.app.play());
     $('#cancelBtn').addEventListener('click', () => this.app.cancel());
     $('#lobbyToggle').addEventListener('click', () => $('.lobby-panel').classList.toggle('collapsed'));
-    const join = () => { this.app.sound.play('click'); this.app.joinRoom($('#roomIn').value); };
+    const join = () => { this.app.sound.play('click'); const v = $('#roomIn').value; $('#roomIn').blur(); this.app.joinRoom(v); };
+    // iOS scrolls the page up to make room for the keyboard: put it back afterwards
+    document.addEventListener('focusout', (e) => { if (e.target.matches && e.target.matches('input, textarea')) setTimeout(() => { if (!document.activeElement || !document.activeElement.matches('input, textarea')) scrollTo(0, 0); }, 80); });
     $('#joinBtn').addEventListener('click', join);
     $('#roomIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
     $('#roomIn').addEventListener('input', (e) => { const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5); if (v !== e.target.value) e.target.value = v; });
     $('#startBtn').addEventListener('click', () => { this.app.sound.play('click'); this.app.startRoom(); });
-    $('#roomCopy').addEventListener('click', () => {
-      const code = $('#roomCodeTxt').textContent, done = () => this.toast(`Room code ${code} copied — send it to your friends!`, 'good');
-      try { navigator.clipboard.writeText(code).then(done, () => this.toast(`Your room code is ${code}`)); } catch { this.toast(`Your room code is ${code}`); }
+    $('#roomCopy').addEventListener('click', () => { // share an invite link (opens the game straight into this room)
+      const code = $('#roomCodeTxt').textContent, url = location.origin + location.pathname + '?room=' + code;
+      const text = `Join my CranGuys room! Code: ${code}`, done = () => this.toast(`Invite link copied — send it to your friends! (Code ${code})`, 'good');
+      const copy = () => { try { navigator.clipboard.writeText(text + '\n' + url).then(done, () => this.toast(`Your room code is ${code}`)); } catch { this.toast(`Your room code is ${code}`); } };
+      if (navigator.share && isTouch()) navigator.share({ title: 'CranGuys', text, url }).catch(() => {}); else copy();
     });
     $$('#colorSlot button').forEach((b) => b.addEventListener('click', () => { this.colorSlot = b.dataset.slot; $$('#colorSlot button').forEach((x) => x.classList.toggle('on', x === b)); this.renderLocker(); }));
     this.renderShowCard();
@@ -3552,7 +3560,7 @@ class UI {
     if (this.screen === 'locker') this.renderLocker();
   }
   renderShowCard() {
-    const slots = [['race', 'Round 1'], ['race', 'Round 2'], ['survival', 'Round 3'], ['final', 'Final']];
+    const slots = [['race', 'Round 1'], ['race', 'Round 2'], ['survival', 'Round 3'], ['final', 'Round 4']];
     $('.sc-rounds').innerHTML = slots.map(([type, lbl]) => {
       const T = TYPE[type], names = POOLS[type].map((id) => levelMeta(id).name).filter((n, i, a) => a.indexOf(n) === i);
       return `<div class="sc-round" style="background:${T.col}" title="${esc(names.join(' · '))}"><i class="fa-solid ${T.icon}"></i><b>${T.label}</b><small>${lbl}</small><small><i class="fa-solid fa-dice"></i> ${names.length} maps</small></div>`;
@@ -3687,12 +3695,16 @@ class UI {
     });
   }
   async accountModal() {
-    const app = this.app, p = this.profile, online = app.mode === 'online';
+    const app = this.app, p = this.profile, online = app.mode === 'online' && app.onlineOK; // logins only exist on a CranGuys server
     let lb = [];
     try { lb = await app.backend.leaderboard(); } catch {}
     const stats = `<div class="seg2"><div class="note"><b>${p.wins}</b> wins</div><div class="note"><b>${p.shows}</b> shows</div><div class="note"><b>${p.finals}</b> finals</div><div class="note">Lv <b>${p.level}</b></div></div>`;
     let acct;
-    if (!online) acct = `<p class="note"><i class="fa-solid fa-robot"></i> You’re playing offline. Your bean, Cranberries and items are saved on this device. Connect to a CranGuys server for online shows, accounts and the global leaderboard.</p>`;
+    if (!online) acct = `<p class="note"><i class="fa-solid fa-circle-check"></i> <b>No sign-in needed!</b> Your bean, Cranberries and items are saved on this device, and Online and Friends games work without an account — other players only see your bean’s name and outfit.</p>
+      <h4><i class="fa-solid fa-link"></i> Move your bean to another device</h4>
+      <p class="note">Copy your save code here, then on the other device open this screen and tap <b>Load save code</b>.</p>
+      <div class="seg2"><button class="btn mint" id="svCopy"><i class="fa-solid fa-copy"></i> Copy save code</button><button class="btn ghost" id="svShow"><i class="fa-solid fa-right-to-bracket"></i> Load save code</button></div>
+      <div id="svBox" class="hide"><textarea class="field" id="svIn" rows="3" placeholder="Paste your save code (starts with CG1-)" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea><button class="btn yellow" id="svLoad" style="width:100%">Load my bean</button></div>`;
     else if (p.guest) acct = `<p class="note">You’re a <b>guest</b>. Create a login to keep your bean on any device.</p>
       <input class="field" id="acU" placeholder="Username" maxlength="16" autocapitalize="off" autocomplete="username"><input class="field" id="acP" type="password" placeholder="Password (6+ characters)" autocomplete="current-password">
       <div class="seg2"><button class="btn mint" id="acReg"><i class="fa-solid fa-user-plus"></i> Create login</button><button class="btn ghost" id="acLog"><i class="fa-solid fa-right-to-bracket"></i> Sign in</button></div>`;
@@ -3703,6 +3715,16 @@ class UI {
       if ($('#acReg', b)) $('#acReg', b).addEventListener('click', run(() => app.account('register', U(), P())));
       if ($('#acLog', b)) $('#acLog', b).addEventListener('click', run(() => app.account('login', U(), P())));
       if ($('#acOut', b)) $('#acOut', b).addEventListener('click', run(() => app.account('logout')));
+      if ($('#svCopy', b)) $('#svCopy', b).addEventListener('click', () => {
+        const code = app.local.exportCode(), done = () => this.toast('Save code copied! Paste it on your other device.', 'good');
+        const fallback = () => { $('#svBox', b).classList.remove('hide'); $('#svIn', b).value = code; $('#svIn', b).select(); this.toast('Copy the code from the box.'); };
+        try { navigator.clipboard.writeText(code).then(done, fallback); } catch { fallback(); }
+      });
+      if ($('#svShow', b)) $('#svShow', b).addEventListener('click', () => { $('#svBox', b).classList.remove('hide'); $('#svIn', b).value = ''; $('#svIn', b).focus(); });
+      if ($('#svLoad', b)) $('#svLoad', b).addEventListener('click', async () => {
+        try { const p2 = await app.local.importCode($('#svIn', b).value); app.backend = app.local; this.setProfile(p2); app.refreshBean(); this.closeModal(); this.toast(`Welcome back, ${p2.name}!`, 'good'); app.sound.play('buy'); }
+        catch (e) { app.sound.play('error'); this.toast(e.message, 'bad'); }
+      });
     });
   }
 
@@ -5836,7 +5858,7 @@ __m["client/js/p2p.js"] = (() => {
 // Both classes expose the same small interface as RemoteConn / LocalServer: send(msg), update(dt), close(),
 // .open and .rtt, delivering decoded messages (objects or binary snapshots) to onMsg.
 const { Match } = __m["shared/game.js"];
-const { TIMING, TICK_HZ, PROTO, PHASE } = __m["shared/config.js"];
+const { TICK_HZ, PROTO, PHASE } = __m["shared/config.js"];
 const { decodeInput } = __m["shared/protocol.js"];
 const { sanitizeLoadout } = __m["shared/cosmetics.js"];
 const enc = new TextEncoder(), dec = new TextDecoder();
@@ -5844,7 +5866,7 @@ const P2P = {
   PREFIX: 'cranguys/v3',
   BROKERS: ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'],
   ICE: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }, { urls: 'stun:stun.cloudflare.com:3478' }],
-  MAX_HUMANS: 16, CONNECT_MS: 6000, GATHER_MAX: 2500, ANSWER_MS: 9000, DC_MS: 8000, HOST_SILENT_MS: 12000, PEER_SILENT_MS: 12000,
+  MAX_HUMANS: 16, PUBLIC_LOBBY: 45, JOIN_GRACE: 20, CONNECT_MS: 6000, GATHER_MAX: 2500, ANSWER_MS: 9000, DC_MS: 8000, HOST_SILENT_MS: 12000, PEER_SILENT_MS: 12000,
   CODE_CHARS: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
 };
 // test / power-user override: window.CG_BROKERS = ['ws://…'] or localStorage 'cg.brokers'
@@ -6025,7 +6047,7 @@ class P2PHost {
     const p = this.backend.profile;
     let match = null;
     match = this.match = new Match({
-      lobbySecs: this.isPublic ? TIMING.lobbyOnline : 900, hold: !this.isPublic,
+      lobbySecs: this.isPublic ? P2P.PUBLIC_LOBBY : 900, hold: !this.isPublic,
       show: typeof window !== 'undefined' && Array.isArray(window.CG_SHOW) ? window.CG_SHOW : undefined,
       send: (slot, msg) => { if (match === this.match) this.route(slot, msg); },
       hooks: {
@@ -6090,13 +6112,14 @@ class P2PHost {
     if (m.t === 'offer') {
       if (m.v !== PROTO) return reply({ t: 'nope', why: 'version' });
       let e = this.peers.get(m.pid);
+      if (e && m.oid && e.oid === m.oid) { if (e.answer) reply(e.answer); return; } // a repeat: resend our answer once it's ready
       if (!e) {
         if (!this.match || this.match.locked || this.match.ended) return reply({ t: 'nope', why: 'started' });
         if (this.humans() >= P2P.MAX_HUMANS || this.peers.size >= P2P.MAX_HUMANS * 2) return reply({ t: 'nope', why: 'full' });
         e = { pid: m.pid, slot: -1, via, peer: null, relay: false, seen: now(), lost: false, gone: false };
         this.peers.set(m.pid, e);
       }
-      e.via = via; e.seen = now(); e.relay = false;
+      e.via = via; e.seen = now(); e.relay = false; e.oid = m.oid; e.answer = null;
       if (e.peer) { e.peer.close(); e.peer = null; }
       if (m.sdp && rtcOK()) {
         try {
@@ -6104,10 +6127,12 @@ class P2PHost {
           peer.on('data', (d) => this.onPeerRaw(e, d));
           peer.on('down', () => { if (e.peer === peer) { e.peer = null; if (!e.relay && e.slot >= 0) this.lose(e); } });
           const sdp = await peer.acceptOffer(m.sdp);
-          return reply({ t: 'answer', sdp });
+          e.answer = { t: 'answer', sdp };
+          return reply(e.answer);
         } catch { if (e.peer) e.peer.close(); e.peer = null; }
       }
-      reply({ t: 'answer', sdp: null }); // no WebRTC: the client will use the relay
+      e.answer = { t: 'answer', sdp: null }; // no WebRTC: the client will use the relay
+      reply(e.answer);
     } else if (m.t === 'relay') { const e = this.peers.get(m.pid); if (e) { e.relay = true; e.via = via; this.alive(e); } }
   }
   onPeerRaw(e, d) {
@@ -6128,6 +6153,8 @@ class P2PHost {
         const slot = this.match.addPlayer({ userId: 'p2p:' + e.pid, name: String(m.name || 'Bean').replace(/[<>]/g, '').slice(0, 16) || 'Bean', cos: sanitizeLoadout(m.cos) });
         if (slot < 0) { this.sendTo(e, { t: 'err', code: 'full', msg: 'That show is full or has already started.' }); return; }
         e.slot = slot; this.bySlot.set(slot, e);
+        // someone just found our public show: make sure they get a proper look at the lobby
+        if (this.isPublic && this.match.phase === PHASE.LOBBY && this.match.phaseT < P2P.JOIN_GRACE * TICK_HZ) this.match.setPhase(PHASE.LOBBY, P2P.JOIN_GRACE);
         this.match.welcome(slot);
         this.onState('peers', this.guests());
         return;
@@ -6182,8 +6209,9 @@ class P2PClient {
   constructor({ backend, code, onMsg, onState }) {
     this.backend = backend; this.code = cleanCode(code); this.onMsg = onMsg; this.onState = onState || (() => {});
     this.pid = uid(); this.isHost = false; this.open = false; this.rtt = 0; this.relay = false; this.peer = null; this.q = [];
-    this.ready = false; this.closed = false; this.lastHost = 0; this.inBuf = []; this.waiter = null;
-    this.hub = new Hub(false, (t, d) => this.onRelay(t, d));
+    this.ready = false; this.closed = false; this.lastHost = 0; this.inBuf = []; this.waiter = null; this.via = null;
+    // like the host, listen on every broker we can reach, so it doesn't matter which ones each network allows
+    this.hub = new Hub(true, (t, d, c) => this.onRelay(t, d, c));
   }
   async start() {
     this.hub.sub(TOPIC.client(this.code, this.pid));
@@ -6206,8 +6234,12 @@ class P2PClient {
     }
     if (this.closed) return;
     const ans = this.waitFor(['answer', 'nope'], P2P.ANSWER_MS);
-    this.hub.pub(TOPIC.host(this.code), JSON.stringify({ t: 'offer', pid: this.pid, sdp, v: PROTO }));
-    const m = await ans;
+    const offer = JSON.stringify({ t: 'offer', pid: this.pid, oid: uid(), sdp, v: PROTO });
+    this.hub.pub(TOPIC.host(this.code), offer);
+    // MQTT QoS 0 can drop a message, and the host may still be connecting to a broker: knock again
+    const again = [setTimeout(() => this.waiter && this.hub.pub(TOPIC.host(this.code), offer), 2500), setTimeout(() => this.waiter && this.hub.pub(TOPIC.host(this.code), offer), 5500)];
+    let m;
+    try { m = await ans; } finally { again.forEach(clearTimeout); }
     if (m.t === 'nope') throw new Error(m.why === 'full' ? 'That room is full.' : m.why === 'started' ? 'That show has already started — ask your friend to make a new room after it ends!' : m.why === 'version' ? 'Your friend is on a different version — both refresh the page.' : 'Could not join that room.');
     if (m.sdp && this.peer) {
       try { await this.peer.acceptAnswer(m.sdp); } catch { return this.useRelay(); }
@@ -6217,7 +6249,7 @@ class P2PClient {
   useRelay() {
     if (this.closed) return;
     this.relay = true; if (this.peer) { this.peer.close(); this.peer = null; }
-    this.hub.pub(TOPIC.host(this.code), JSON.stringify({ t: 'relay', pid: this.pid }));
+    this.hub.pub(TOPIC.host(this.code), JSON.stringify({ t: 'relay', pid: this.pid }), this.via);
     if (this.ready) this.sendJSON(this.hello()); else this.goLive('relay');
   }
   hello() { const p = this.backend.profile; return { t: 'hello', name: p.name, cos: p.loadout, v: PROTO }; }
@@ -6232,11 +6264,11 @@ class P2PClient {
     this.peer = null;
     if (this.ready && !this.relay && !this.closed) { this.onState('relay'); this.useRelay(); }
   }
-  onRelay(topic, data) {
+  onRelay(topic, data, via) {
     if (topic !== TOPIC.client(this.code, this.pid) || !data.length || this.closed) return;
     if (data[0] === 0x7b) {
       let m; try { m = JSON.parse(dec.decode(data)); } catch { return; }
-      const w = this.waiter; if (w && w.types.includes(m.t)) { this.waiter = null; clearTimeout(w.to); w.res(m); }
+      const w = this.waiter; if (w && w.types.includes(m.t)) { this.waiter = null; clearTimeout(w.to); this.via = via; w.res(m); } // stick to the broker the host answered on
       return;
     }
     if (!this.relay) return;
@@ -6264,12 +6296,12 @@ class P2PClient {
   }
   sendJSON(o) {
     if (this.peer && this.peer.open) this.peer.send(o);
-    else if (this.relay) this.hub.pub(TOPIC.host(this.code), frame(FR.JSON, this.pid, enc.encode(JSON.stringify(o))));
+    else if (this.relay) this.hub.pub(TOPIC.host(this.code), frame(FR.JSON, this.pid, enc.encode(JSON.stringify(o))), this.via);
   }
   flushInputs() {
     if (!this.inBuf.length) return;
     const u = new Uint8Array(this.inBuf.length * 9); this.inBuf.forEach((x, i) => u.set(x.subarray(0, 9), i * 9)); this.inBuf = [];
-    this.hub.pub(TOPIC.host(this.code), frame(FR.BIN, this.pid, u));
+    this.hub.pub(TOPIC.host(this.code), frame(FR.BIN, this.pid, u), this.via);
   }
   // ---- interface used by the App / ClientGame ----
   send(m) {
@@ -6300,7 +6332,7 @@ class P2PClient {
 function findPublicRoom(ms = 2600) {
   return new Promise((resolve, reject) => {
     const rooms = new Map();
-    const hub = new Hub(false, (topic, data) => {
+    const hub = new Hub(true, (topic, data) => {
       if (topic !== TOPIC.pub || data[0] !== 0x7b) return;
       let m; try { m = JSON.parse(dec.decode(data)); } catch { return; }
       if (m && m.t === 'room' && m.v === PROTO && typeof m.code === 'string' && m.code.length === 5) rooms.set(m.code, { ...m, seen: Date.now() });
@@ -6325,6 +6357,12 @@ __m["client/js/api.js"] = (() => {
 const { store } = __m["client/js/util.js"];
 const { dailyShop, itemById, DEFAULT_OWNED, DEFAULT_LOADOUT, START_BALANCE, sanitizeLoadout, computeRewards, levelForXp, LEVEL_UP_BONUS } = __m["shared/cosmetics.js"];
 const { beanName } = __m["shared/names.js"];
+const { hashStr } = __m["shared/math.js"];
+// Save codes let a bean move between devices without a server: CG1-<base64 json>-<checksum>.
+const b64e = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64d = (s) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+const SAVE_FIELDS = ['berries', 'crowns', 'xp', 'wins', 'shows', 'finals', 'rounds'];
+
 class RemoteBackend {
   constructor(base) { this.kind = 'online'; this.base = base.replace(/\/$/, ''); this.token = store.get('cg.token:' + this.base); this.profile = null; }
   async req(method, path, body) {
@@ -6382,6 +6420,24 @@ class LocalBackend {
     p.berries -= b; p.crowns -= c; p.owned.push(id); return this.save(p);
   }
   async rename(name) { const n = String(name || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').trim().slice(0, 16); if (n.length < 2) throw new Error('Names need 2–16 letters or numbers'); const p = this.load(); p.name = n; return this.save(p); }
+  exportCode() {
+    const p = this.load(), d = { v: 1, name: p.name, owned: p.owned, loadout: p.loadout };
+    for (const k of SAVE_FIELDS) d[k] = p[k] | 0;
+    const body = b64e(JSON.stringify(d));
+    return `CG1-${body}-${hashStr('cg:' + body).toString(36)}`;
+  }
+  async importCode(code) {
+    const m = /^CG1-([A-Za-z0-9_-]+)-([a-z0-9]+)$/.exec(String(code || '').replace(/\s+/g, ''));
+    if (!m || hashStr('cg:' + m[1]).toString(36) !== m[2]) throw new Error('That save code isn’t right — copy the whole thing and try again.');
+    let d; try { d = JSON.parse(b64d(m[1])); } catch { throw new Error('That save code isn’t right — copy the whole thing and try again.'); }
+    const p = this.load();
+    const owned = new Set([...DEFAULT_OWNED, ...(Array.isArray(d.owned) ? d.owned.filter((id) => itemById(id)) : [])]);
+    for (const k of SAVE_FIELDS) p[k] = Math.max(0, Math.min(1e9, d[k] | 0));
+    p.owned = [...owned];
+    p.loadout = sanitizeLoadout({ ...DEFAULT_LOADOUT, ...(d.loadout || {}) }, owned);
+    const n = String(d.name || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').trim().slice(0, 16); if (n.length >= 2) p.name = n;
+    return this.save(p);
+  }
   async register() { throw new Error('Accounts need an online CranGuys server'); }
   async login() { throw new Error('Accounts need an online CranGuys server'); }
   async leaderboard() { const p = this.load(); return [{ name: p.name + ' (you)', wins: p.wins, crowns: p.crowns, xp: p.xp, shows: p.shows }]; }
@@ -6531,7 +6587,7 @@ class App {
     watchIcons();
     // safety notice: shown on every visit, only dismissible with Accept
     const sf = $('#safety'); sf.classList.add('show');
-    $('#sfAccept').addEventListener('click', () => { sf.classList.remove('show'); sf.remove(); this.sound && this.sound.unlock(); this.accepted = true; });
+    $('#sfAccept').addEventListener('click', () => { sf.classList.remove('show'); sf.remove(); this.sound && this.sound.unlock(); this.accepted = true; this.tryInvite(); });
     addEventListener('keydown', (e) => { if (!this.accepted && e.key === 'Escape') e.preventDefault(); }, true);
     if (isTouch()) document.body.classList.add('touch');
     this.sound = new Sound();
@@ -6572,6 +6628,9 @@ class App {
     // Friends makes / joins a private room (peer-to-peer, so it works on static hosting like GitHub Pages).
     this.p2pOK = p2pSupported();
     this.mode = settings.mode === 'offline' ? 'offline' : settings.mode === 'friends' && this.p2pOK ? 'friends' : this.onlineOK || this.p2pOK ? 'online' : 'offline';
+    // invite links (…?room=ABCDE) open straight into Friends mode and join once the safety notice is accepted
+    const invite = cleanCode(new URLSearchParams(location.search).get('room') || '');
+    if (invite.length === 5 && this.p2pOK) { this.mode = 'friends'; this.invite = invite; }
     this.backend = this.mode === 'online' && this.onlineOK ? this.remote : this.local;
     this.ui.boot(0.9, 'Polishing the crown…');
     this.ui.setProfile(this.backend.profile);
@@ -6579,7 +6638,7 @@ class App {
     this.menuBean = new BeanVis(beanLook(this.backend.profile.loadout));
     this.connect();
     this.ui.boot(1);
-    setTimeout(() => { this.goto('menu'); }, 250);
+    setTimeout(() => { this.goto('menu'); if (this.invite) $('#roomIn').value = this.invite; this.tryInvite(); }, 250);
     this.last = performance.now();
     requestAnimationFrame((t) => this.loop(t));
   }
@@ -6662,6 +6721,12 @@ class App {
     }
   }
   startRoom() { if (this.conn && this.conn.isHost) this.conn.send({ t: 'start' }); }
+  tryInvite() {
+    if (!this.invite || !this.accepted || this.state !== 'menu') return;
+    const code = this.invite; this.invite = null;
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch {}
+    this.joinRoom(code);
+  }
   onConnState(st, code) {
     if (st === 'open') this.ui.setStatus('Connected');
     else if (st === 'reconnecting') { this.ui.setStatus('Reconnecting…', false); if (this.state === 'show') this.ui.toast('Connection lost — reconnecting…', 'bad'); }
