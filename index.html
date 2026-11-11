@@ -615,6 +615,23 @@ body.lobbying .chat-btn { right: auto; left: calc(14px + var(--safe-l)); top: ca
 .feat .ic.th.big { position: relative; width: 140px; height: 140px; background: radial-gradient(circle at 50% 35%, #fffef2, #fff1b8); }
 .tryon .to-th { width: 58px; height: 58px; display: block; }
 .item .rar .ico { width: 8px; height: 8px; vertical-align: -1px; }
+/* ---------- promo codes & exclusive items ---------- */
+.promo-tab .ico { color: #14c99a; }
+.promo-tab { animation: giftbob 2.6s ease-in-out infinite; }
+@keyframes giftbob { 0%, 80%, 100% { transform: none; } 86% { transform: rotate(-6deg) scale(1.05); } 93% { transform: rotate(6deg) scale(1.05); } }
+.field.promo-in { font-family: var(--font); font-size: 28px; letter-spacing: 6px; text-align: center; text-transform: uppercase; }
+.field.shake { animation: shake .4s; border-color: #ff4d6d; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.promo-win { position: relative; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 4px; overflow: hidden; }
+.promo-win > * { position: relative; }
+.promo-win .pw-rays { position: absolute; left: 50%; top: 120px; width: 520px; height: 520px; margin: -260px 0 0 -260px; background: repeating-conic-gradient(rgba(20,201,154,.22) 0 12deg, transparent 12deg 24deg); border-radius: 50%; animation: rbspin 14s linear infinite; }
+.promo-win small { font-weight: 900; letter-spacing: 2px; color: #0e9f7a; }
+.promo-win h3 { margin: 4px 0 0; font-family: var(--font); font-weight: 400; font-size: 32px; color: #fff; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; }
+.pw-item { width: 170px; height: 170px; border-radius: 30px; border: 5px solid var(--ink); box-shadow: 0 7px 0 var(--ink), 0 0 30px rgba(20,201,154,.6); display: grid; place-items: center; background: radial-gradient(circle at 50% 35%, #f2fff9, #8ff0cf); animation: rbpop .7s cubic-bezier(.2,1.6,.4,1) both; }
+.pw-item img { width: 100%; height: 100%; object-fit: contain; }
+.pw-tag { color: #fff; font-weight: 900; font-size: 12px; letter-spacing: 1.5px; padding: 3px 12px; border-radius: 99px; border: 3px solid var(--ink); }
+.item.r-exclusive { --rc: #0fb48a; background: radial-gradient(120% 90% at 50% 30%, #f4fffb 0 32%, #b8f5df 66%, #6fe3bd); box-shadow: inset 0 -5px 0 rgba(0,0,0,.1), 0 4px 0 var(--ink), 0 0 14px rgba(20,201,154,.55); }
+.item.r-exclusive .shine::before { content: ''; position: absolute; top: -50%; left: -60%; width: 40%; height: 200%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.8), transparent); transform: rotate(20deg); animation: shine 3s ease-in-out infinite; }
 
 </style>
 </head>
@@ -645,6 +662,7 @@ body.lobbying .chat-btn { right: auto; left: calc(14px + var(--safe-l)); top: ca
       <button class="tab on" data-go="menu"><i class="fa-solid fa-house"></i><span>Home</span></button>
       <button class="tab" data-go="locker"><i class="fa-solid fa-shirt"></i><span>Locker</span></button>
       <button class="tab" data-go="shop"><i class="fa-solid fa-store"></i><span>Shop</span></button>
+      <button class="tab promo-tab" data-act="promo"><i class="fa-solid fa-gift"></i><span>Codes</span></button>
     </nav>
     <div class="nameplate" data-act="rename"><span class="nm">Bean</span><i class="fa-solid fa-pen"></i></div>
     <div class="showcard card">
@@ -785,7 +803,7 @@ body.lobbying .chat-btn { right: auto; left: calc(14px + var(--safe-l)); top: ca
   <div id="nogl" class="screen"><div class="card"><h2>WebGL2 needed</h2><p>CranGuys needs WebGL2. Please open it in Safari 15+, Chrome or Firefox.</p></div></div>
 </div>
 <script>
-/* CranGuys bundle — 43 modules */
+/* CranGuys bundle — 44 modules */
 (() => {
 'use strict';
 const __m = {};
@@ -1571,6 +1589,7 @@ const RARITY = {
   rare: { name: 'Rare', price: { b: 900 }, col: '#b07bff' },
   epic: { name: 'Epic', price: { b: 1800 }, col: '#ff5fa2' },
   legendary: { name: 'Legendary', price: { c: 4 }, col: '#ffc83d' },
+  exclusive: { name: 'Exclusive', price: {}, col: '#14c99a' }, // promo codes only: never in the shop, never on bots
 };
 
 const colors = [
@@ -1595,6 +1614,7 @@ const hats = [
   ['propeller', 'Propeller Cap', 4, 'rare'], ['halo', 'Halo', 5, 'epic'], ['tophat', 'Top Hat', 6, 'rare'], ['cone', 'Traffic Cone', 7, 'common'],
   ['viking', 'Viking Horns', 8, 'epic'], ['chef', 'Chef Hat', 9, 'common'], ['leaf', 'Cranberry Sprig', 10, 'epic'], ['antenna', 'Antennae', 11, 'common'],
   ['flower', 'Daisy', 12, 'rare'], ['beanie', 'Bobble Beanie', 13, 'common'], ['pirate', 'Pirate Hat', 14, 'legendary'], ['headphones', 'Headphones', 15, 'rare'],
+  ['builder', 'Builder’s Hat', 16, 'exclusive'],
 ];
 
 const CATALOG = [];
@@ -1627,7 +1647,7 @@ function sanitizeLoadout(lo, owned) {
 function randomLoadout(rng) {
   const by = (s) => CATALOG.filter((i) => i.slot === s);
   const pick = (arr) => arr[Math.floor(rng() * arr.length) % arr.length].id;
-  const hats = by('hat');
+  const hats = by('hat').filter((i) => i.rarity !== 'exclusive');
   return {
     color: pick(by('color')), color2: pick(by('color')), pattern: pick(by('pattern')), face: pick(by('face')),
     hat: rng() < 0.45 ? 'h_none' : pick(hats),
@@ -1638,7 +1658,7 @@ function randomLoadout(rng) {
 function dailyShop(date = new Date()) {
   const day = date.toISOString().slice(0, 10);
   const rng = mulberry32(hashStr('cranguys-shop-' + day));
-  const pool = CATALOG.filter((i) => !DEFAULT_OWNED.includes(i.id) && i.rarity !== 'legendary' && i.id !== 'h_none');
+  const pool = CATALOG.filter((i) => !DEFAULT_OWNED.includes(i.id) && i.rarity !== 'legendary' && i.rarity !== 'exclusive' && i.id !== 'h_none');
   const legend = CATALOG.filter((i) => i.rarity === 'legendary');
   const picks = [];
   while (picks.length < 6) { const it = pool[Math.floor(rng() * pool.length)]; if (!picks.includes(it.id)) picks.push(it.id); }
@@ -1917,7 +1937,7 @@ const curve = (fn, k) => Array.from({ length: k + 1 }, (_, i) => fn(i / k));
 
 // ---------------- hats (world meshes in head space: origin = top of head, +z = the way the bean faces) ----------------
 // how much each hat glows (index = hat k)
-const HAT_EMIT = [0, 0, 0.05, 0, 0, 0.32, 0, 0.04, 0, 0, 0, 0.12, 0, 0, 0, 0.06];
+const HAT_EMIT = [0, 0, 0.05, 0, 0, 0.32, 0, 0.04, 0, 0, 0, 0.12, 0, 0, 0, 0.06, 0.03];
 function buildHats(R) {
   const H = [null];
   const C = (h) => hex2rgb(h);
@@ -2073,6 +2093,27 @@ function buildHats(R) {
       at(mb, [s * 0.44, -0.33, 0], q); cylinder(mb, 0.13, 0.055, { c: C('#ff2e88') }, 24, 0.03);
       at(mb, [s * 0.395, -0.33, 0], q); torus(mb, 0.1, 0.035, { c: C('#3a3070') }, 24, 8);
       at(mb, [s * 0.5, -0.33, 0], q); torus(mb, 0.085, 0.016, { c: C('#7ef0ff') }, 24, 6);
+    }
+  }));
+  // 16 builder's hat (EXCLUSIVE, promo code) — safety-yellow hard hat: ribbed shell, peak, hazard band, headlamp
+  H.push(mk((mb) => {
+    const yel = { c: C('#ffc21a') };
+    at(mb, [0, -0.11, 0]); sphere(mb, 0.345, yel, 28, 0.275);
+    for (const [x, rr] of [[0, 0.036], [-0.12, 0.024], [0.12, 0.024]]) {
+      const R0 = Math.sqrt(0.352 * 0.352 - x * x), Ry = 0.282 * (R0 / 0.352);
+      at(mb, [0, 0, 0]); tube(mb, curve((t) => { const a = Math.PI * (0.1 + t * 0.8); return [x, -0.11 + Math.sin(a) * Ry, Math.cos(a) * R0]; }, 18), rr, { c: C('#ffd23f') }, 8);
+    }
+    at(mb, [0, -0.095, 0]); cylinder(mb, 0.352, 0.028, { c: C('#ffd23f'), c2: C('#2b2350'), mat: MAT.flagcloth, uv: (p) => [0, Math.atan2(p[2], p[0]) * 4.2 + p[1] * 6] }, 48, 0.01);
+    at(mb, [0, -0.13, 0]); torus(mb, 0.36, 0.03, { c: C('#f0ab00') }, 44, 8);
+    at(mb, [0, -0.135, 0.2], ax([1, 0, 0], -0.08), [1, 0.1, 0.62]); sphere(mb, 0.33, { c: C('#f5b400') }, 28);
+    // headlamp on the front of the shell
+    at(mb, [0, 0.02, 0.315], ax([1, 0, 0], 0.55)); roundBox(mb, [0.075, 0.05, 0.03], 0.02, { c: C('#3a3346') });
+    at(mb, [0, 0.03, 0.35], ax([1, 0, 0], Math.PI / 2 + 0.55)); cylinder(mb, 0.058, 0.035, { c: C('#5a5470') }, 20, 0.015);
+    at(mb, [0, 0.058, 0.392], ax([1, 0, 0], 0.55), [1, 1, 0.5]); sphere(mb, 0.05, { c: C('#ffffff') }, 14);
+    // gold "exclusive" badges on each side with a little cranberry
+    for (const sx of [-1, 1]) {
+      at(mb, [sx * 0.322, -0.03, 0.02], ax([0, 0, 1], sx * Math.PI / 2 * 0.86)); cylinder(mb, 0.062, 0.012, { c: C('#ffd85a'), mat: MAT.gold }, 20, 0.008);
+      at(mb, [sx * 0.338, -0.025, 0.02]); sphere(mb, 0.03, { c: C('#d6195a'), mat: MAT.gold }, 10);
     }
   }));
   return H;
@@ -3042,7 +3083,7 @@ class Scene {
     if (L.m.props) R.draw(L.m.props, null, {});
     for (const c of L.m.chunks) if (this.visible(c.mn, c.mx)) R.draw(c.mesh);
     if (L.m.dyn) R.draw(L.m.dyn, null, { dyn: true });
-    for (const k of L.m.kin) if (k.c.wp[1] > -1000) R.draw(k.mesh, m4.fromRM(k.c.wm, k.c.wp), d.kinTint && k.c.vis && (k.c.vis.cm !== undefined || k.c.vis.cmScreen) ? { tint: d.kinTint(k.c), emit: k.c.vis.cmScreen ? 0.55 : 0 } : undefined);
+    for (const k of L.m.kin) if (k.c.wp[1] > -1000) R.draw(k.mesh, m4.fromRM(k.c.wm, k.c.wp), d.kinTint && k.c.vis && (k.c.vis.cm !== undefined || k.c.vis.cmScreen || k.c.vis.wb) ? { tint: d.kinTint(k.c), emit: k.c.vis.cmScreen ? 0.55 : 0 } : undefined);
     for (const b of d.balls) R.draw(this.boulder, m4.trs(b.p, b.q || [0, 0, 0, 1]));
     if (d.hoops) for (const o of d.hoops) { // Hoop Hunt: upright rings turning slowly where they float
       const h = o.h, q = qt.mul(qt.axis([0, 1, 0], h.yaw + this.time * 0.9), qt.axis([1, 0, 0], Math.PI / 2));
@@ -4092,30 +4133,49 @@ return { SURGE, buildSlimeSurge };
 
 // ---- shared/levels/wallrush.js ----
 __m["shared/levels/wallrush.js"] = (() => {
-// Round type: SURVIVAL (or FINAL) — "Wall Rush". Candy walls sweep across a floating deck, faster and faster.
-// Each wall has gaps to slip through and low blocks to hop over; anything else shoves you off into the slime.
-// Walls are rows of 2 m blocks. Four reusable wall "slots" take turns, and every block's pose is a pure function
+// Round type: SURVIVAL (or FINAL) — "Wall Rush". Candy walls sweep across a floating deck. It starts gentle and
+// gets a LOT harder in three stages: walls speed up from 8 to ~19 m/s, the gaps shrink to a single block, walls
+// arrive closer and closer together (stacked "double walls" by the end), and the escape blocks get nastier —
+// low blocks you have to jump and high bars you have to DIVE under. Anything else shoves you off into the slime.
+// Walls are rows of 2 m blocks. Six reusable wall "slots" take turns, and every block's pose is a pure function
 // of time (kin type 'fn'), so the host, every guest's prediction and the bots all see exactly the same walls.
 const { Kit, C, T_PLAY } = __m["shared/levels/kit.js"];
-const { mulberry32 } = __m["shared/math.js"];
-const WALL = { block: 2, halfH: 1.6, thick: 0.32, low: 0.85, from: 36, travel: 72, slots: 4, start: T_PLAY + 2.5 };
+const { mulberry32, clamp } = __m["shared/math.js"];
+const WALL = { block: 2, halfH: 1.6, thick: 0.32, low: 0.85, duck: 1.15, from: 36, travel: 72, slots: 6, start: T_PLAY + 2.5 };
+const GAP = 0, SOLID = 1, LOW = 2, DUCK = 3;
+// difficulty stages by wave number (each wave is one wall)
+const STAGE2 = 14, STAGE3 = 34;
 
-// The whole wave schedule for a level seed: when each wall leaves, how long it takes to cross, and its pattern
-// (0 = gap, 1 = solid, 2 = low block to jump). Early walls are slow with wide gaps; later ones are quick and mean.
+// The whole wave schedule for a level seed: when each wall leaves, how long it takes to cross, and its pattern.
 function wallPlan(seed, n) {
   const r = mulberry32((seed ^ 0x3a11) >>> 0), waves = [];
-  let t = WALL.start;
-  for (let w = 0; w < 160; w++) {
-    const k = Math.min(1, w / 26);                       // 0 -> 1 difficulty ramp
-    const move = 9 - k * 3.2 + (r() - 0.5) * 0.5;        // seconds for the 72 m pass (8 -> ~12.5 m/s)
-    const gaps = k < 0.25 ? 3 : k < 0.6 ? 2 : r() < 0.6 ? 1 : 2, lows = k < 0.2 ? 0 : Math.round(r() * (1 + k * 2));
-    const pat = new Uint8Array(n).fill(1);
-    const g0 = Math.floor(r() * n);
-    for (let g = 0; g < gaps; g++) { let j = (g0 + Math.floor((g * n) / gaps) + Math.floor(r() * 2)) % n; pat[j] = 0; }
-    for (let l = 0; l < lows; l++) { const j = Math.floor(r() * n); if (pat[j]) pat[j] = 2; }
-    if (!pat.includes(0)) pat[Math.floor(r() * n)] = 0;
-    waves.push({ t, move, pat, slot: w % WALL.slots });
-    t += Math.max(2.1, 5.6 - k * 3.0 + (r() - 0.5) * 0.6); // the gap to the next wall shrinks too
+  let t = WALL.start, prevGap = Math.floor(n / 2);
+  for (let w = 0; w < 220; w++) {
+    const k1 = Math.min(1, w / STAGE2), k2 = clamp((w - STAGE2) / (STAGE3 - STAGE2), 0, 1), k3 = clamp((w - STAGE3) / 30, 0, 1);
+    const stage = w < STAGE2 ? 1 : w < STAGE3 ? 2 : 3;
+    // seconds for the 72 m pass: 9 -> 6 -> 4.6 -> 3.7 (8 m/s -> ~19 m/s)
+    const move = 9 - 3.0 * k1 - 1.4 * k2 - 0.9 * k3 + (r() - 0.5) * 0.4;
+    const pat = new Uint8Array(n).fill(SOLID);
+    let gaps, lows, ducks;
+    if (stage === 1) { gaps = k1 < 0.3 ? 3 : k1 < 0.7 ? 2 : r() < 0.5 ? 1 : 2; lows = k1 < 0.25 ? 0 : Math.round(r() * 2); ducks = 0; }
+    else if (stage === 2) { gaps = r() < 0.75 ? 1 : 2; lows = 1 + Math.round(r() * (1 - k2)); ducks = r() < 0.3 + k2 * 0.5 ? 1 : 0; }
+    else { gaps = 1; lows = r() < 0.6 - k3 * 0.4 ? 1 : 0; ducks = r() < 0.55 ? 1 : 0; }
+    if (stage === 1) { const g0 = Math.floor(r() * n); for (let g = 0; g < gaps; g++) pat[(g0 + Math.floor((g * n) / gaps) + Math.floor(r() * 2)) % n] = GAP; }
+    else {
+      // the single gap moves each wall: further and further from the last one (you have to sprint for it)
+      const reach = stage === 2 ? 2 + Math.round(k2 * 2) : 3 + Math.round(k3 * 3);
+      let j = prevGap + Math.round((r() * 2 - 1) * reach);
+      if (j < 0) j = -j; if (j >= n) j = 2 * (n - 1) - j; j = clamp(j, 0, n - 1);
+      pat[j] = GAP; prevGap = j;
+      if (gaps > 1) pat[(j + Math.floor(n / 2) + Math.floor(r() * 3) - 1 + n) % n] = GAP;
+    }
+    for (let l = 0; l < lows; l++) { const j = Math.floor(r() * n); if (pat[j] === SOLID) pat[j] = LOW; }
+    for (let d = 0; d < ducks; d++) { const j = Math.floor(r() * n); if (pat[j] === SOLID) pat[j] = DUCK; }
+    if (!pat.includes(GAP)) pat[Math.floor(r() * n)] = GAP;
+    if (stage === 1) prevGap = pat.indexOf(GAP);
+    waves.push({ t, move, pat, slot: w % WALL.slots, stage });
+    // time to the next wall: 5.6 -> 2.8 -> 1.8 -> 1.15 s (two walls on top of each other by the end)
+    t += Math.max(1.1, 5.6 - 2.8 * k1 - 1.0 * k2 - 0.65 * k3 + (r() - 0.5) * 0.5);
   }
   return waves;
 }
@@ -4123,9 +4183,11 @@ function wallPlan(seed, n) {
 function slotWave(plan, slot, t) {
   let lo = 0, hi = plan.length - 1, idx = -1;
   while (lo <= hi) { const m = (lo + hi) >> 1; if (plan[m].t <= t) { idx = m; lo = m + 1; } else hi = m - 1; }
-  for (let w = idx; w >= 0 && w > idx - 8; w--) { const W = plan[w]; if (W.slot === slot && t < W.t + W.move) return W; }
+  for (let w = idx; w >= 0 && w > idx - 14; w--) { const W = plan[w]; if (W.slot === slot && t < W.t + W.move) return W; }
   return null;
 }
+// when each difficulty stage starts (for the "faster!" warnings)
+const stageTimes = (plan) => [plan[STAGE2].t, plan[STAGE3].t];
 const wallZ = (W, t) => WALL.from - WALL.travel * ((t - W.t) / W.move);
 
 function buildWallRush(seed, variant) {
@@ -4139,21 +4201,22 @@ function buildWallRush(seed, variant) {
   for (const s of [-1, 1]) K.deco({ shape: 'pillar', p: [s * (half + 1.6), -6, WALL.from - 6], r: 0.9, h: 14, vis: { c: C.yellow, c2: C.hotpink, m: 'stripes' } });
   K.deco({ shape: 'gate', p: [0, 2, depth + 3.2], w: half * 2 + 2, h: 4.6, vis: { c: C.hotpink, c2: C.yellow, m: 'plain', text: 'WALLS!' } });
   // the walls: slots x blocks, each moved by a time function
-  const cols = [C.hotpink, C.orange, C.purple, C.blue], walls = [];
+  const walls = [];
   for (let s = 0; s < WALL.slots; s++) for (let j = 0; j < n; j++) {
     const x = -half + WALL.block * (j + 0.5);
     const fn = (t) => {
-      const W = slotWave(plan, s, t); if (!W || !W.pat[j]) return null;
-      return [0, W.pat[j] === 2 ? WALL.low - 2 * WALL.halfH : 0, wallZ(W, t)];
+      const W = slotWave(plan, s, t); if (!W || W.pat[j] === GAP) return null;
+      const k = W.pat[j];
+      return [0, k === LOW ? WALL.low - 2 * WALL.halfH : k === DUCK ? WALL.duck : 0, wallZ(W, t)];
     };
-    K.box([x, WALL.halfH, 0], [WALL.block / 2 - 0.04, WALL.halfH, WALL.thick], { noLedge: true, kin: { type: 'fn', fn }, vis: { c: cols[s], c2: C.white, m: j % 2 ? 'stripes' : 'bricks' } });
+    K.box([x, WALL.halfH, 0], [WALL.block / 2 - 0.04, WALL.halfH, WALL.thick], { noLedge: true, kin: { type: 'fn', fn }, vis: { c: C.white, c2: '#e4d8f5', m: j % 2 ? 'stripes' : 'bricks', wb: { s, j } } }); // coloured by type at draw time
   }
   walls.push({ n, half });
 
   return {
     id: 'wallrush', type: 'survival', name: 'Wall Rush', desc: 'Dodge the walls — find a gap or hop the low blocks!', descFinal: 'Last bean on the deck wins the crown!',
-    tip: 'Watch each wall as it comes: run to a gap, or jump the low (short) blocks. Don’t get pushed off the back!',
-    colliders: K.cols, triggers: K.trigs, decor: K.decor, ndyn: K.ndyn, hazards: K.hazards, wall: { plan, n, half, depth },
+    tip: 'Run to the gap, jump the short blocks and DIVE under the raised bars. It gets much faster — don’t get pushed off the back!',
+    colliders: K.cols, triggers: K.trigs, decor: K.decor, ndyn: K.ndyn, hazards: K.hazards, wall: { plan, n, half, depth, stages: stageTimes(plan) },
     timeLimit: 150, timeLimitFinal: 300, slimeY: -4.5, theme: 'day', noClock: true,
     rules: { killY: -3, respawn: false, checkpoints: [{ spawn: [0, 0, 0], spread: [8, 8], yaw: 0, box: [0, 0, 0, 0, 0, 0] }] },
     spawns(cnt) {
@@ -4170,7 +4233,7 @@ function buildWallRush(seed, variant) {
   };
 }
 
-return { WALL, wallPlan, slotWave, wallZ, buildWallRush };
+return { WALL, GAP, STAGE2, wallPlan, slotWave, stageTimes, wallZ, buildWallRush };
 })();
 
 // ---- shared/levels/hoophunt.js ----
@@ -4654,7 +4717,7 @@ const { PHASE } = __m["shared/config.js"];
 const { rankOf, RANKS, TIERS, isUnreal, UNREAL_RP, MIN_SHOW_HUMANS } = __m["shared/ranks.js"];
 const { rankBadge } = __m["client/js/rankbadge.js"];
 const { cmCycle, cmPhase, CM_COLORS } = __m["shared/levels/colormatch.js"];
-const HAT_EMOJI = ['⛔', '🥳', '👑', '🐰', '🧢', '😇', '🎩', '🚧', '🪖', '👨‍🍳', '🍒', '📡', '🌼', '🧶', '🏴‍☠️', '🎧'];
+const HAT_EMOJI = ['⛔', '🥳', '👑', '🐰', '🧢', '😇', '🎩', '🚧', '🪖', '👨‍🍳', '🍒', '📡', '🌼', '🧶', '🏴‍☠️', '🎧', '👷'];
 const TYPE = { race: { label: 'RACE', icon: 'fa-flag-checkered', col: '#22c8ff' }, hunt: { label: 'HUNT', icon: 'fa-bullseye', col: '#22c48a' }, race2: { label: 'RACE · HUNT', icon: 'fa-bullseye', col: '#1fb5c9' }, survival: { label: 'SURVIVAL', icon: 'fa-shapes', col: '#ff2e88' }, final: { label: 'FINAL', icon: 'fa-crown', col: '#ffb300' }, lobby: { label: 'LOBBY', icon: 'fa-umbrella-beach', col: '#a66bff' } };
 const TIPS = [
   'Dive (Ctrl / DIVE) to belly-flop under high sweepers.', 'Hold GRAB at a wall’s edge to climb up ledges.', 'Not every door breaks — follow the crowd!',
@@ -4729,6 +4792,7 @@ class UI {
       case 'settings': return this.settingsModal();
       case 'account': return this.accountModal();
       case 'rename': return this.renameModal();
+      case 'promo': return this.promoModal();
       case 'closeModal': return this.closeModal();
       case 'leave': return app.leaveShow();
       case 'leaveAsk': return this.confirm('Leave this show?', 'You’ll still get rewards for the rounds you’ve qualified from.', 'Leave', () => app.leaveShow());
@@ -4844,7 +4908,7 @@ class UI {
     $('#colorSlot').classList.toggle('hide', this.lockerTab !== 'color');
     const slot = this.lockerTab === 'color' ? this.colorSlot : this.lockerTab;
     const owned = new Set(p.owned), look = beanLook(p.loadout);
-    const items = CATALOG.filter((i) => i.slot === this.lockerTab).sort((a, b) => (owned.has(b.id) - owned.has(a.id)) || Object.keys(RARITY).indexOf(a.rarity) - Object.keys(RARITY).indexOf(b.rarity));
+    const items = CATALOG.filter((i) => i.slot === this.lockerTab && (i.rarity !== 'exclusive' || owned.has(i.id))).sort((a, b) => (owned.has(b.id) - owned.has(a.id)) || Object.keys(RARITY).indexOf(a.rarity) - Object.keys(RARITY).indexOf(b.rarity));
     if (!this.shopData) this.app.backend.shop().then((s) => (this.shopData = s)).catch(() => {});
     const g = $('#lockerGrid'); g.innerHTML = '';
     for (const it of items) {
@@ -4921,6 +4985,32 @@ class UI {
   closeModal() { $('#modal').classList.remove('show'); }
   confirm(title, text, yes, fn) {
     this.modal(`<h3>${esc(title)}</h3><p>${esc(text)}</p><div class="seg2"><button class="btn ghost" data-act="closeModal">Stay</button><button class="btn pink" id="cfYes">${esc(yes)}</button></div>`, (b) => $('#cfYes', b).addEventListener('click', () => { this.closeModal(); fn(); }));
+  }
+  // promo codes: type a code, get the reward straight away (and a big reveal)
+  promoModal() {
+    this.modal(`<h3><i class="fa-solid fa-gift"></i> Promo code</h3><p class="note">Got a code? Type it in to unlock something special.</p>
+      <input class="field promo-in" id="pcIn" maxlength="24" placeholder="ENTER CODE" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" inputmode="text">
+      <button class="btn yellow" id="pcOk" style="width:100%"><i class="fa-solid fa-gift"></i> Redeem</button>`, (b) => {
+      const go = async () => {
+        const v = $('#pcIn', b).value; if (!v.trim()) return;
+        $('#pcOk', b).disabled = true;
+        try { const r = await this.app.redeem(v); this.promoReveal(r); }
+        catch (e) { this.app.sound.play('error'); this.toast(e.message, 'bad'); $('#pcIn', b).classList.remove('shake'); void $('#pcIn', b).offsetWidth; $('#pcIn', b).classList.add('shake'); $('#pcOk', b).disabled = false; }
+      };
+      $('#pcOk', b).addEventListener('click', go); $('#pcIn', b).addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+      if (!isTouch()) setTimeout(() => $('#pcIn', b).focus(), 60);
+    });
+  }
+  promoReveal({ promo, items }) {
+    const it = items && items[0] ? itemById(items[0]) : null, url = it ? this.app.thumb(it, it.slot) : null;
+    this.modal(`<div class="promo-win"><div class="pw-rays"></div><small>CODE REDEEMED!</small>
+      ${it ? `<div class="pw-item r-${it.rarity}">${url ? `<img src="${url}" alt="">` : itemIcon(it, beanLook(this.profile.loadout))}</div><h3>${esc(it.name)}</h3><span class="pw-tag" style="background:${RARITY[it.rarity].col}">${RARITY[it.rarity].name.toUpperCase()}</span>` : `<h3>${esc(promo.title)}</h3>`}
+      <p class="note">${esc(promo.note || 'Enjoy!')}</p>
+      ${it ? `<button class="btn yellow" id="pwEq" style="width:100%"><i class="fa-solid fa-check"></i> Wear it now</button>` : ''}</div>`, (b) => {
+      if (it) $('#pwEq', b).addEventListener('click', () => { this.closeModal(); this.app.equip(it.slot === 'color' ? 'color' : it.slot, it.id); this.app.goto('locker'); this.lockerTab = it.slot; this.renderLocker(); });
+    });
+    this.app.sound.play('buy'); setTimeout(() => this.app.sound.play('confetti'), 250);
+    this.app.fx.confetti([0, 1.4, 0], 90, 9);
   }
   renameModal() {
     const p = this.profile;
@@ -6107,7 +6197,7 @@ const { crownAt } = __m["shared/levels/crownpeak.js"];
 const { TILE, LAYERS } = __m["shared/levels/tiletumble.js"];
 const { T_PLAY } = __m["shared/levels/kit.js"];
 const { kinAngle, kinW } = __m["shared/collide.js"];
-const { WALL, slotWave, wallZ } = __m["shared/levels/wallrush.js"];
+const { WALL, GAP, LOW, DUCK } = __m["shared/levels/wallrush.js"];
 const { hoopAt, hoopLive } = __m["shared/levels/hoophunt.js"];
 const { cmCycle, cmPhase } = __m["shared/levels/colormatch.js"];
 const { TICK_HZ } = __m["shared/config.js"];
@@ -6146,7 +6236,7 @@ class BotBrain {
     const p = s.p;
     if (L.type === 'lobby') ({ tx, tz, throttle, wantJump } = this.lobby(p, t));
     else if (L.bot && L.bot.ring) ({ tx, tz, throttle } = this.ring(s));
-    else if (L.bot && L.bot.walls) ({ tx, tz, throttle, wantJump } = this.walls(m, s, tick));
+    else if (L.bot && L.bot.walls) ({ tx, tz, throttle, wantJump, wantDive } = this.walls(m, s, tick));
     else if (L.bot && L.bot.hunt) ({ tx, tz, throttle, wantJump } = this.hunt(m, s, tick));
     else if (L.bot && L.bot.colors) ({ tx, tz, throttle } = this.colors(m, s, tick));
     else if (L.bot && L.bot.dodge) ({ tx, tz, throttle } = this.dodge(m, s));
@@ -6297,39 +6387,39 @@ class BotBrain {
     return { x: clamp(posAt(best, t + 1.2), -8.5, 8.5), z: edge - 1.4, th: 0.6, jump: false };
   }
 
-  // Wall Rush: read the next wall coming at us, run to the nearest gap (or line up on a low block and hop it).
+  // Wall Rush: read the next wall coming at us, run to the gap (or line up on a low block to hop, or a raised
+  // bar to dive under). Later walls are fast enough that the weaker bots misjudge them more and more.
   walls(m, s, tick) {
     const L = m.level, Wd = L.wall, p = s.p, t = tick * DT, r = this.rng, plan = Wd.plan;
     let best = null, bt = 1e9;
     let lo = 0, hi = plan.length - 1, idx = 0;
     while (lo <= hi) { const k = (lo + hi) >> 1; if (plan[k].t <= t + 3) { idx = k; lo = k + 1; } else hi = k - 1; }
-    for (let w = idx; w >= 0 && w > idx - 8; w--) {
+    for (let w = idx; w >= 0 && w > idx - 14; w--) {
       const W = plan[w]; if (t > W.t + W.move) continue;
       const tArr = W.t + W.move * (WALL.from - (p[2] + 0.6)) / WALL.travel; // when its front face reaches us
       if (tArr < t - 0.05) continue;
       if (tArr < bt) { bt = tArr; best = W; }
     }
     const homeZ = -2 + this.lane * 3;
-    if (!best) return { tx: p[0] + (this.lane * 4 - p[0]) * 0.3, tz: homeZ, throttle: 0.5, wantJump: false };
+    const none = { wantJump: false, wantDive: false };
+    if (!best) return { tx: p[0] + (this.lane * 4 - p[0]) * 0.3, tz: homeZ, throttle: 0.5, ...none };
     const dt = bt - t, n = Wd.n, half = Wd.half, bx = (j) => -half + WALL.block * (j + 0.5);
     const cur = clamp(Math.floor((p[0] + half) / WALL.block), 0, n - 1);
-    if (this.wPlan !== best) { // decide once per wall (with a skill-based chance of misreading it)
-      this.wPlan = best; this.wRead = 0.18 + (1 - this.skill) * 0.5 + r() * 0.25;
-      let bj = -1, bd = 1e9;
-      for (let j = 0; j < n; j++) { if (best.pat[j] !== 0) continue; const d = Math.abs(bx(j) - p[0]) + r() * 1.5 * (1.2 - this.skill); if (d < bd) { bd = d; bj = j; } }
-      let lj = -1, ld = 1e9;
-      for (let j = 0; j < n; j++) { if (best.pat[j] !== 2) continue; const d = Math.abs(bx(j) - p[0]); if (d < ld) { ld = d; lj = j; } }
-      this.wGoal = bj; this.wLow = lj;
-      if (r() < (1 - this.skill) * 0.18) this.wGoal = Math.floor(r() * n); // a bad read
+    const nearest = (type, noise) => { let bj = -1, bd = 1e9; for (let j = 0; j < n; j++) { if (best.pat[j] !== type) continue; const d = Math.abs(bx(j) - p[0]) + r() * noise; if (d < bd) { bd = d; bj = j; } } return bj; };
+    if (this.wPlan !== best) { // decide once per wall (with a skill-based chance of misreading it — worse at speed)
+      this.wPlan = best; this.wRead = 0.18 + (1 - this.skill) * 0.45 + r() * 0.2;
+      this.wGoal = nearest(GAP, 1.5 * (1.2 - this.skill)); this.wLow = nearest(LOW, 0); this.wDuck = nearest(DUCK, 0);
+      if (r() < (1 - this.skill) * (0.12 + 0.1 * best.stage)) this.wGoal = Math.floor(r() * n); // a bad read
     }
-    if (dt > 3.2 - this.wRead) return { tx: p[0], tz: homeZ, throttle: 0.4, wantJump: false }; // still sizing it up
+    if (dt > 3.2 - this.wRead) return { tx: p[0], tz: homeZ, throttle: 0.4, ...none }; // still sizing it up
+    const reach = (j) => j >= 0 && Math.abs(bx(j) - p[0]) / 7.2 < dt - 0.15;
     let goal = this.wGoal;
-    const reach = (j) => Math.abs(bx(j) - p[0]) / 7.2 < dt - 0.15;
-    if (goal < 0 || !reach(goal)) goal = this.wLow >= 0 && reach(this.wLow) ? this.wLow : best.pat[cur] === 0 ? cur : goal;
-    const onLow = best.pat[cur] === 2;
-    const jump = onLow && dt < 0.2 + this.react * 0.3 && dt > 0.02;
+    if (!reach(goal)) goal = reach(this.wLow) ? this.wLow : reach(this.wDuck) ? this.wDuck : best.pat[cur] !== 1 ? cur : goal;
+    const here = best.pat[cur];
+    const jump = here === LOW && dt < 0.2 + this.react * 0.3 && dt > 0.02;
+    const dive = here === DUCK && dt < 0.75 + this.skill * 0.1 && dt > 0.38 && r() < 0.35 + this.skill * 0.6;
     const tx = goal >= 0 ? bx(goal) : p[0];
-    return { tx, tz: Math.abs(tx - p[0]) > 0.5 ? p[2] : homeZ, throttle: Math.abs(tx - p[0]) > 0.35 ? 1 : 0.25, wantJump: jump };
+    return { tx, tz: Math.abs(tx - p[0]) > 0.5 ? p[2] : homeZ, throttle: Math.abs(tx - p[0]) > 0.35 ? 1 : 0.25, wantJump: jump, wantDive: dive };
   }
 
   // Hoop Hunt: head for the best-value hoop nearby; hop through ground hoops, ride a pad up into gold ones.
@@ -8212,6 +8302,24 @@ class Chat {
 return { Chat };
 })();
 
+// ---- shared/promo.js ----
+__m["shared/promo.js"] = (() => {
+// CranGuys — promo codes. The game only stores a fingerprint of each code (so the codes aren't readable in the
+// page source); the codes themselves are listed in the README. To add one: work out its fingerprint with
+// `node tools/promo-key.mjs THECODE` and add it below with what it gives.
+const { hashStr } = __m["shared/math.js"];
+const cleanPromo = (code) => String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 24);
+const promoKey = (code) => hashStr('cranguys-promo-v1:' + cleanPromo(code)).toString(36);
+
+// fingerprint -> reward. items: catalog ids to unlock; berries / crowns: currency to add.
+const PROMOS = {
+  o3pqbg: { items: ['h_builder'], title: 'Builder’s Hat', note: 'An exclusive hard hat for builders only!' },
+};
+const promoFor = (code) => PROMOS[promoKey(code)] || null;
+
+return { cleanPromo, promoKey, PROMOS, promoFor };
+})();
+
 // ---- client/js/api.js ----
 __m["client/js/api.js"] = (() => {
 // CranGuys — backends. RemoteBackend talks to the CranGuys cloud API (auth, profile, locker, shop).
@@ -8221,6 +8329,7 @@ const { dailyShop, itemById, DEFAULT_OWNED, DEFAULT_LOADOUT, START_BALANCE, sani
 const { beanName } = __m["shared/names.js"];
 const { hashStr } = __m["shared/math.js"];
 const { rankedUpdate } = __m["shared/ranks.js"];
+const { promoFor, promoKey } = __m["shared/promo.js"];
 // Save codes let a bean move between devices without a server: CG1-<base64 json>-<checksum>.
 const b64e = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const b64d = (s) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
@@ -8243,6 +8352,7 @@ class RemoteBackend {
   async status() { return this.req('GET', '/api/status'); }
   async equip(loadout) { return (await this.req('POST', '/api/locker/equip', { loadout })).profile; }
   async buy(itemId) { return (await this.req('POST', '/api/shop/buy', { itemId })).profile; }
+  async redeem(code) { const j = await this.req('POST', '/api/promo', { code }); return { profile: j.profile, promo: promoFor(code) }; }
   async shop() { return this.req('GET', '/api/shop'); }
   async rename(name) { return (await this.req('POST', '/api/me/name', { name })).profile; }
   async register(username, password) { return (await this.req('POST', '/api/auth/register', { username, password })).profile; }
@@ -8285,6 +8395,18 @@ class LocalBackend {
     p.berries -= b; p.crowns -= c; p.owned.push(id); return this.save(p);
   }
   async rename(name) { const n = String(name || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').trim().slice(0, 16); if (n.length < 2) throw new Error('Names need 2–16 letters or numbers'); const p = this.load(); p.name = n; return this.save(p); }
+  // promo codes (see shared/promo.js): unlock items once, on this device
+  async redeem(code) {
+    const info = promoFor(code);
+    if (!info) throw new Error('That code doesn’t work — check it and try again.');
+    const p = this.load(), key = promoKey(code);
+    p.promos = p.promos || [];
+    const fresh = (info.items || []).filter((id) => itemById(id) && !p.owned.includes(id));
+    if (p.promos.includes(key) && !fresh.length) throw new Error('You’ve already used that code!');
+    for (const id of fresh) p.owned.push(id);
+    if (!p.promos.includes(key)) { p.berries += info.berries | 0; p.crowns += info.crowns | 0; p.promos.push(key); }
+    return { profile: this.save(p), promo: info };
+  }
   exportCode() {
     const p = this.load(), d = { v: 1, name: p.name, owned: p.owned, loadout: p.loadout };
     for (const k of SAVE_FIELDS) d[k] = p[k] | 0;
@@ -8393,6 +8515,7 @@ const ICONS = {
   bullseye: S('M12 2.8a9.2 9.2 0 1 0 0 18.4 9.2 9.2 0 0 0 0-18.4zM12 7.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2zM12 11.5v1'),
   wall: F('M2 4h9v4H2zM13 4h9v4h-9zM2 10h4v4H2zM8 10h8v4H8zM18 10h4v4h-4zM2 16h9v4H2zM13 16h9v4h-9z'),
   ball: F('M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19zM9 6.5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm4.6 1.2a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8zM10.6 11a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8z'),
+  gift: F('M3 8h18v4H3zM4.5 13h6.5v8H5.5a1 1 0 0 1-1-1zM13 13h6.5v7a1 1 0 0 1-1 1H13zM11 8h2v13h-2zM12 7.5C10.8 4.6 9 3 7.4 3.4 5.7 3.8 5.9 6.6 8 7.5zm0 0c1.2-2.9 3-4.5 4.6-4.1 1.7.4 1.5 3.2-.6 4.1z'),
   medal: F('M7 2h4l2 5-3 1.2zM17 2h-4l-1.4 3.6L14 8.2zM12 8.5a6.7 6.7 0 1 1 0 13.4 6.7 6.7 0 0 1 0-13.4zm0 2.6-1.2 2.6-2.8.3 2.1 1.9-.6 2.8 2.5-1.4 2.5 1.4-.6-2.8 2.1-1.9-2.8-.3z'),
   userplus: F('M9.5 2.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zM1.5 20.5c.6-4 3.9-6.5 8-6.5s7.4 2.5 8 6.5a.8.8 0 0 1-.8.9H2.3a.8.8 0 0 1-.8-.9zM18.5 7h2v3h3v2h-3v3h-2v-3h-3v-2h3z'),
 };
@@ -8404,7 +8527,7 @@ const ALIAS = {
   'fa-palette': 'palette', 'fa-shapes': 'shapes', 'fa-face-smile': 'smile', 'fa-hat-cowboy': 'hat', 'fa-flag-checkered': 'flag', 'fa-umbrella-beach': 'umbrella',
   'fa-circle-check': 'circlecheck', 'fa-user-plus': 'userplus', 'fa-dice': 'dice', 'fa-comment': 'comment', 'fa-paper-plane': 'send', 'fa-volume-xmark': 'mute', 'fa-hammer': 'hammer', 'fa-rotate': 'rotate',
   'fa-copy': 'copy', 'fa-eye': 'eye', 'fa-wifi': 'wifi', 'fa-link': 'link', 'fa-shoe-prints': 'shoe',
-  'fa-swords': 'swords', 'fa-droplet': 'droplet', 'fa-bullseye': 'bullseye', 'fa-wall': 'wall', 'fa-bowling-ball': 'ball', 'fa-medal': 'medal',
+  'fa-gift': 'gift', 'fa-swords': 'swords', 'fa-droplet': 'droplet', 'fa-bullseye': 'bullseye', 'fa-wall': 'wall', 'fa-bowling-ball': 'ball', 'fa-medal': 'medal',
 };
 const icon = (name, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ''}</svg>`;
 
@@ -8451,6 +8574,7 @@ const { PHASE, TICK_HZ, DT, MODE, TIMING, INTERP_TICKS, BTN } = __m["shared/conf
 const { crownAt } = __m["shared/levels/crownpeak.js"];
 const { windOn, slimeAt } = __m["shared/world.js"];
 const { cmCycle, cmPhase, CM_COLORS } = __m["shared/levels/colormatch.js"];
+const { slotWave, LOW, DUCK } = __m["shared/levels/wallrush.js"];
 const { qt, clamp } = __m["shared/math.js"];
 const { itemById } = __m["shared/cosmetics.js"];
 const MENU_STATES = new Set(['menu', 'locker', 'shop']);
@@ -8591,6 +8715,14 @@ class App {
       if (room) { try { await this.joinRoom(room.code, true); return; } catch (e) { if (this.searchToken !== token) return; } }
       await this.hostRoom(true, kind);
     } catch (e) { if (this.searchToken === token) this.p2pFail(e); }
+  }
+  // promo codes: unlock whatever the code gives, on whichever backend this mode uses
+  async redeem(code) {
+    const before = new Set((this.backend.profile && this.backend.profile.owned) || []);
+    const r = await this.backend.redeem(code);
+    this.backend.profile = r.profile; if (this.backend.setProfile) this.backend.setProfile(r.profile);
+    this.ui.setProfile(r.profile); this.refreshBean();
+    return { promo: r.promo, items: (r.promo && r.promo.items || []).filter((id) => !before.has(id) || r.profile.owned.includes(id)) };
   }
   debugThumb(lo, kind, size) { return this.scene.thumb(beanLook(lo), kind, size); } // test hook
   // locker / shop thumbnail: a real render of your bean trying the item on (cached per look)
@@ -8965,6 +9097,14 @@ class App {
     }
   }
 
+  // Wall Rush: solid blocks in the slot's colour, low (jump) blocks green, raised (dive) bars bright yellow
+  wallTinter(L, t) {
+    const plan = L.wall.plan, cols = [[1, 0.37, 0.64, 1], [1, 0.55, 0.25, 1], [0.6, 0.38, 1, 1], [0.25, 0.7, 1, 1], [1, 0.3, 0.45, 1], [0.85, 0.4, 0.95, 1]];
+    return (c) => {
+      const { s, j } = c.vis.wb, W = slotWave(plan, s, t), k = W ? W.pat[j] : 1;
+      return k === LOW ? [0.35, 0.92, 0.55, 1] : k === DUCK ? [1, 0.86, 0.2, 1] : cols[s % cols.length];
+    };
+  }
   // Colour Clash: tile colours for this cycle, the big screen showing the colour, sinking tiles going dark
   cmTinter(L, t) {
     const P = cmCycle(L.cm.plan, t), ph = cmPhase(P, t), cache = (this._cmc = this._cmc || new Map());
@@ -9116,7 +9256,12 @@ class App {
     const L = g.level, rise = L.rules && L.rules.rise;
     const hoops = L.type === 'hunt' ? g.liveHoops(Math.floor(worldTick)) : null;
     if (hoops && Math.random() < dt * 8) for (const o of hoops) if (o.h.v >= 5) this.fx.sparkle(o.h.p, 1, [1, 0.85, 0.3, 1]);
-    const kinTint = L.cm ? this.cmTinter(L, worldTime) : null;
+    const kinTint = L.cm ? this.cmTinter(L, worldTime) : L.wall ? this.wallTinter(L, worldTime) : null;
+    if (L.wall && ph === PHASE.PLAY) { // Wall Rush: shout when the walls step up a gear
+      const st = L.wall.stages.filter((x) => worldTime >= x).length;
+      if (this._wallStage !== undefined && st > this._wallStage) { this.ui.banner(st === 1 ? 'FASTER!' : 'MAXIMUM SPEED!', 'bad', st === 1 ? 'Single gaps · dive under the raised bars' : 'Walls back to back — good luck!'); this.sound.play('whistle'); }
+      this._wallStage = st;
+    } else this._wallStage = undefined;
     this.scene.renderGame(this.cam, dt, { worldTime, beans, balls, crown, debris: g.debris, tileStates: (d) => g.tileStates(d), doorStates: (d) => g.doorStates(d), focus: own ? own.p : this.cam.look,
       slimeY: rise ? slimeAt(rise, worldTime) : undefined, hoops, kinTint });
     // ---- nametags ----
