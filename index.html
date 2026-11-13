@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="cg-build" content="5617dd1b89">
+<meta name="cg-build" content="580341b4c5">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -827,6 +827,9 @@ body.intro-on #duelBoard, body.intro-on #hCounter, body.intro-on #hCrown, body.i
 .ad-box .ad-tag { position: absolute; left: 8px; top: 1px; font: 800 10px/14px var(--font, system-ui); letter-spacing: 1px; text-transform: uppercase; color: #7a6a99; }
 .ad-clip { overflow: hidden; border-radius: 8px; }
 .ad-box iframe { display: block; border: 0; transform-origin: 0 0; background: transparent; }
+.ad-debug { position: absolute; left: 8px; bottom: 8px; z-index: 200; max-width: 360px; background: rgba(20,10,40,.88); color: #fff; font: 600 11px/1.4 system-ui, sans-serif; padding: 8px 10px; border-radius: 10px; pointer-events: none; }
+.ad-debug b { display: block; color: #ffd23f; margin-bottom: 2px; }
+.ad-debug i { color: #b9a8e8; font-style: normal; display: inline-block; min-width: 70px; }
 
 </style>
 </head>
@@ -1018,7 +1021,7 @@ body.intro-on #duelBoard, body.intro-on #hCounter, body.intro-on #hCrown, body.i
   <div id="nogl" class="screen"><div class="card"><h2>WebGL2 needed</h2><p>CranGuys needs WebGL2. Please open it in Safari 15+, Chrome or Firefox.</p></div></div>
 </div>
 <script>
-/* CranGuys bundle — 48 modules — build 5617dd1b89 */
+/* CranGuys bundle — 48 modules — build 580341b4c5 */
 (() => {
 'use strict';
 const __m = {};
@@ -1859,7 +1862,7 @@ const hats = [
   ['flower', 'Daisy', 12, 'rare'], ['beanie', 'Bobble Beanie', 13, 'common'], ['pirate', 'Pirate Hat', 14, 'legendary'], ['headphones', 'Headphones', 15, 'rare'],
   ['builder', 'Builder’s Hat', 16, 'exclusive'],
   ['balaclava', 'Pink Balaclava', 17, 'exclusive'], ['dino', 'Dino Hood', 18, 'exclusive'],
-  ['knight', 'Golden Knight Helmet', 19, 'exclusive'], ['bikehelmet', 'Full-Face Bike Helmet', 20, 'exclusive'], ['cape', 'Royal Red Cape', 21, 'exclusive'],
+  ['knight', 'Golden Knight Helmet', 19, 'exclusive'], ['bikehelmet', 'White Ski Mask', 20, 'exclusive'] /* id kept from the old bike helmet so redeemers keep it */, ['cape', 'Royal Red Cape', 21, 'exclusive'],
   ['wings', 'Champion Wings', 22, 'pass'],
   ['frog', 'Frog Hat', 23, 'exclusive'], ['witch', 'Witch Hat', 24, 'exclusive'], ['sundae', 'Sundae Scoop', 25, 'exclusive'], ['jester', 'Jester Hat', 26, 'exclusive'],
   ['unicorn', 'Unicorn Horn', 27, 'exclusive'], ['toadstool', 'Toadstool Cap', 28, 'exclusive'], ['pumpkin', 'Pumpkin Head', 29, 'exclusive'],
@@ -1868,9 +1871,10 @@ const hats = [
   ['beret', 'Beret', 33, 'common'], ['cowboy', 'Cowboy Hat', 34, 'rare'], ['bucket', 'Bucket Hat', 35, 'common'], ['santa', 'Santa Hat', 36, 'rare'],
   ['antlers', 'Antlers', 37, 'epic'], ['mohawk', 'Punk Mohawk', 38, 'rare'], ['bow', 'Big Bow', 39, 'common'], ['flowercrown', 'Flower Crown', 40, 'epic'],
   ['catears', 'Cat Ears', 41, 'common'],
+  ['footface', 'Foot Face', 42, 'exclusive'], ['heist', 'Heist Mask', 43, 'exclusive'],
 ];
 // hats that wrap round the head or body (they squash and stretch with the bean instead of sitting on top)
-const WRAP_HATS = new Set(['h_balaclava', 'h_dino', 'h_knight', 'h_bikehelmet', 'h_cape', 'h_wings', 'h_pumpkin']);
+const WRAP_HATS = new Set(['h_balaclava', 'h_dino', 'h_knight', 'h_bikehelmet', 'h_cape', 'h_wings', 'h_pumpkin', 'h_footface', 'h_heist']);
 // name tags: shown next to your name everywhere other players can see it (never in the shop)
 const tags = [['owner', 'Owner Tag', 'exclusive']];
 
@@ -2009,7 +2013,7 @@ return { $, $$, el, esc, fmt, fmtTime, clock, store, hex2rgb, beanLook, DEFAULT_
 // ---- client/js/geo.js ----
 __m["client/js/geo.js"] = (() => {
 // CranGuys — procedural geometry: soft rounded primitives for the candy-plastic look, the skinned
-// jelly-bean body, 41 hats, and whole-level meshes generated straight from the shared collider data.
+// jelly-bean body, 43 hats, and whole-level meshes generated straight from the shared collider data.
 const { MAT } = __m["client/js/gl.js"];
 const { hex2rgb } = __m["client/js/util.js"];
 const { quatToMat } = __m["shared/math.js"];
@@ -2202,7 +2206,7 @@ const curve = (fn, k) => Array.from({ length: k + 1 }, (_, i) => fn(i / k));
 
 // ---------------- hats (world meshes in head space: origin = top of head, +z = the way the bean faces) ----------------
 // how much each hat glows (index = hat k)
-const HAT_EMIT = [0, 0, 0.05, 0, 0, 0.32, 0, 0.04, 0, 0, 0, 0.12, 0, 0, 0, 0.06, 0.03, 0, 0, 0.04, 0, 0, 0.3, 0, 0, 0, 0, 0.05, 0, 0, 0, 0, 0.22, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const HAT_EMIT = [0, 0, 0.05, 0, 0, 0.32, 0, 0.04, 0, 0, 0, 0.12, 0, 0, 0, 0.06, 0.03, 0, 0, 0.04, 0, 0, 0.3, 0, 0, 0, 0, 0.05, 0, 0, 0, 0, 0.22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.02];
 function buildHats(R) {
   const H = [null];
   const C = (h) => hex2rgb(h);
@@ -2399,19 +2403,23 @@ function buildHats(R) {
     }
   };
   const onShell = (x, y, R0 = 0.455) => { const dy = Math.max(0, y + 0.40); return [x, y, Math.sqrt(Math.max(0, R0 * R0 - x * x - dy * dy))]; };
-  // 17 pink balaclava (EXCLUSIVE, promo code) — a knitted ski mask covering the whole face: two eye holes and a
-  // mouth hole, each with a ribbed rim, plus a ribbed hem, a little top knot and a gold heart on the side
-  H.push(mk((mb) => {
-    const knit = { c: C('#ff4fa0'), c2: C('#ff8cc6'), mat: MAT.flagcloth, uv: (p) => [0, p[1] * 15] }, rim = { c: C('#e8358a') };
-    const holes = [[-0.105, -0.322, 0.074, 0.062], [0.105, -0.322, 0.074, 0.062], [0, -0.472, 0.088, 0.046]]; // eyes, mouth: x, y, rx, ry
+  // a knitted ski mask covering the whole face: two eye holes and a mouth hole, each with a ribbed rim, plus a
+  // ribbed hem; deco() adds the trimmings (top knot, badge, stripes…)
+  const SKI_HOLES = [[-0.105, -0.322, 0.074, 0.062], [0.105, -0.322, 0.074, 0.062], [0, -0.472, 0.088, 0.046]]; // eyes, mouth: x, y, rx, ry
+  const inHole = (x, y, z, holes = SKI_HOLES) => z > 0 && holes.some(([hx, hy, rx, ry]) => ((x - hx) / rx) ** 2 + ((y - hy) / ry) ** 2 < 1);
+  const skiMask = (mb, k1, k2, rim, hem1, hem2, mouth, deco) => {
     at(mb, [0, 0, 0]);
-    shell(mb, knit, (x, y, z) => !(z > 0 && holes.some(([hx, hy, rx, ry]) => ((x - hx) / rx) ** 2 + ((y - hy) / ry) ** 2 < 1)), 0.455, -0.74, 30, 110);
-    for (const [hx, hy, rx, ry] of holes) { at(mb, [0, 0, 0]); tube(mb, curve((t) => { const a = t * Math.PI * 2; return onShell(hx + Math.sin(a) * rx, hy + Math.cos(a) * ry); }, 36), 0.021, rim, 6); }
-    at(mb, [0, -0.472, 0.418], [0, 0, 0, 1], [1, 1, 0.3]); sphere(mb, 0.072, { c: C('#5a0f2a') }, 16, 0.036); // inside of the mouth
-    at(mb, [0, -0.74, 0]); torus(mb, 0.455, 0.045, { c: C('#e8358a'), c2: C('#ff6fb2'), mat: MAT.flagcloth, uv: (p) => [0, Math.atan2(p[2], p[0]) * 9] }, 48, 10);
+    shell(mb, { c: C(k1), c2: C(k2), mat: MAT.flagcloth, uv: (p) => [0, p[1] * 15] }, (x, y, z) => !inHole(x, y, z), 0.455, -0.74, 30, 110);
+    for (const [hx, hy, rx, ry] of SKI_HOLES) { at(mb, [0, 0, 0]); tube(mb, curve((t) => { const a = t * Math.PI * 2; return onShell(hx + Math.sin(a) * rx, hy + Math.cos(a) * ry); }, 36), 0.021, { c: C(rim) }, 6); }
+    at(mb, [0, -0.472, 0.418], [0, 0, 0, 1], [1, 1, 0.3]); sphere(mb, 0.072, { c: C(mouth) }, 16, 0.036); // inside of the mouth
+    at(mb, [0, -0.74, 0]); torus(mb, 0.455, 0.045, { c: C(hem1), c2: C(hem2), mat: MAT.flagcloth, uv: (p) => [0, Math.atan2(p[2], p[0]) * 9] }, 48, 10);
+    deco(mb);
+  };
+  // 17 pink balaclava (EXCLUSIVE, codes "190812" and "PINKMASK-6620") — pink knit, a little top knot and a gold heart
+  H.push(mk((mb) => skiMask(mb, '#ff4fa0', '#ff8cc6', '#e8358a', '#e8358a', '#ff6fb2', '#5a0f2a', (mb) => {
     at(mb, [0, 0.05, 0]); sphere(mb, 0.07, { c: C('#ff6fb2') }, 12, 0.05);
     at(mb, [0.36, -0.36, -0.24], ax([0, 1, 0], 2.15)); roundBox(mb, [0.05, 0.05, 0.012], 0.012, { c: C('#ffd85a'), mat: MAT.gold });
-  }));
+  })));
   // 18 dino hood (EXCLUSIVE, promo code "Jaylum") — a green hoodie-hood shaped like a dino's open mouth: teeth round the
   // face opening, a spiky crest from the forehead down the back and googly eyes on top
   H.push(mk((mb) => {
@@ -2466,23 +2474,16 @@ function buildHats(R) {
     at(mb, [0, -0.8, 0]); torus(mb, 0.468, 0.03, dk, 48, 8);
     for (let k = 0; k < 6; k++) { const th = 0.5 - k * 0.24, p = arc(th, 0.49); at(mb, p, ax([1, 0, 0], th - 1.0 + k * 0.1), [0.55, 1, 1]); cone(mb, 0.075, 0.26 - Math.abs(k - 2) * 0.025, { c: C(k % 2 ? '#e8202f' : '#ff4040') }, 12, 0.012); }
   }));
-  // 20 full-face bike helmet (EXCLUSIVE, code "redbull") — a downhill-style lid: big face window, chin guard with
-  // a vent grille, a peak, top vents and racing stripes (no logos)
-  H.push(mk((mb) => {
-    const shellC = { c: C('#f4f6fb'), c2: C('#ffffff'), uv: (p) => [p[0], p[1]] }, blk = { c: C('#1d1d28') }, red = { c: C('#ff3b3b') };
-    at(mb, [0, 0, 0]);
-    shell(mb, shellC, (x, y, z) => !(z > 0 && (x / 0.27) ** 2 + ((y + 0.35) / 0.18) ** 2 < 1), 0.48, -0.84, 26, 96);
-    at(mb, [0, 0, 0]); tube(mb, curve((t) => { const a = t * Math.PI * 2; return onShell(Math.sin(a) * 0.27, -0.35 + Math.cos(a) * 0.18, 0.48); }, 40), 0.03, blk, 8);
-    // chin guard: a dark band round the front below the window, with a vent grille
-    at(mb, [0, 0, 0]); tube(mb, curve((t) => { const a = (t - 0.5) * 2.2; return [Math.sin(a) * 0.5, -0.66, Math.cos(a) * 0.5]; }, 20), 0.07, blk, 10);
-    for (let k = -2; k <= 2; k++) { at(mb, [k * 0.05, -0.66, 0.565]); roundBox(mb, [0.014, 0.035, 0.012], 0.008, { c: C('#5b5b6e') }); }
-    // the peak over the window
-    at(mb, [0, -0.11, 0.44], ax([1, 0, 0], -0.25)); roundBox(mb, [0.27, 0.014, 0.12], 0.012, blk);
-    // top vents and racing stripes
-    for (const sx of [-0.09, 0.09]) { at(mb, [0, 0, 0]); tube(mb, curve((t) => { const th = 0.55 - t * 2.3, p = arc(th, 0.488); return [sx, p[1], p[2]]; }, 18), 0.022, red, 8); }
-    for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) { const th = 0.2 - k * 0.35, p = arc(th, 0.48); at(mb, [sx * 0.2, p[1] - 0.02, p[2]], ax([1, 0, 0], th)); roundBox(mb, [0.035, 0.01, 0.06], 0.008, blk); }
-    at(mb, [0, -0.84, 0]); torus(mb, 0.48, 0.028, blk, 48, 8);
-  }));
+  // 20 white ski mask (EXCLUSIVE, code "redbull") — like the pink balaclava but snowy white, with two ice-blue
+  // stripes round the forehead and a little snowflake badge on the side. (Its item id is still h_bikehelmet, so
+  // anyone who redeemed the old bike helmet now has this.)
+  H.push(mk((mb) => skiMask(mb, '#f7f9fd', '#e2e8f3', '#c4d0e4', '#9fc4ee', '#d7e8fb', '#3a2c4a', (mb) => {
+    for (const y of [-0.155, -0.2]) { at(mb, [0, y, 0]); torus(mb, Math.sqrt(0.455 ** 2 - (y + 0.4) ** 2) + 0.006, 0.014, { c: C('#7fb6f0') }, 64, 6); }
+    // snowflake: three crossed bars and a dot, on the side of the head
+    const sp = [0.395, -0.42, -0.2], face = qm(ax([0, 1, 0], 2.05), [0, 0, 0, 1]);
+    for (let k = 0; k < 3; k++) { at(mb, sp, qm(face, ax([0, 0, 1], k * Math.PI / 3))); roundBox(mb, [0.055, 0.009, 0.008], 0.006, { c: C('#5aa2ea') }); }
+    at(mb, sp); sphere(mb, 0.016, { c: C('#ffffff') }, 8);
+  })));
   // 21 royal red cape (EXCLUSIVE, code "royalavey") — a velvet cape tied round the neck with a gold-trimmed collar
   // and a bow at the front, flaring out down the back
   H.push(mk((mb) => {
@@ -2685,6 +2686,63 @@ function buildHats(R) {
       at(mb, [sx * 0.2, -0.05, 0.05], qm(ax([0, 0, 1], -sx * 0.32), ax([0, 1, 0], Math.PI / 4)), [0.7, 0.75, 0.3]); cone(mb, 0.1, 0.18, { c: C('#ff9ec4') }, 4, 0.005);
     }
   }));
+  // 42 foot face (EXCLUSIVE, code "FOOTFACE-3317") — your whole head is a big bare foot standing on end: five toes
+  // across the top with shiny toenails (big toe on the left, a few hairs on it), knuckle creases, a pink sole down
+  // the back, a plaster on the side and a stripy ankle sock round the bottom. Your eyes peek out of the front.
+  H.push(mk((mb) => {
+    const skin = { c: C('#f4c4a0'), c2: C('#f8d2b4'), uv: (p) => [p[0], p[1]] }, crease = { c: C('#d99b78') }, nail = { c: C('#fff1ea') };
+    const eyes = SKI_HOLES.slice(0, 2).map(([x, y, rx, ry]) => [x, y, rx * 0.95, ry * 0.95]);
+    at(mb, [0, 0, 0]); shell(mb, skin, (x, y, z) => !inHole(x, y, z, eyes), 0.455, -0.7, 28, 100);
+    for (const [hx, hy, rx, ry] of eyes) { at(mb, [0, 0, 0]); tube(mb, curve((t) => { const a = t * Math.PI * 2; return onShell(hx + Math.sin(a) * rx, hy + Math.cos(a) * ry); }, 30), 0.016, crease, 6); }
+    // the sole: a pinker oval down the back, and a rounded heel low at the back
+    at(mb, [0, 0, 0]); shell(mb, { c: C('#f5b1a2') }, (x, y, z) => z < -0.12 && (x / 0.28) ** 2 + ((y + 0.4) / 0.27) ** 2 < 1, 0.459, -0.7, 28, 100);
+    at(mb, [0, -0.6, -0.31], [0, 0, 0, 1], [1.1, 0.75, 0.62]); sphere(mb, 0.21, { c: C('#f4c4a0') }, 22);
+    // five toes in a row over the front of the top (big toe on the left), leaning forward, each with a shiny nail
+    const TH = 0.35, rot = (v) => [v[0], v[1] * Math.cos(TH) - v[2] * Math.sin(TH), v[1] * Math.sin(TH) + v[2] * Math.cos(TH)];
+    const toes = [[-0.2, 0.13], [-0.045, 0.105], [0.085, 0.095], [0.2, 0.084], [0.3, 0.07]]; // x, radius
+    toes.forEach(([x, r], k) => {
+      const z = 0.16 - k * 0.015, c = [x, -0.4 + Math.sqrt(Math.max(0, 0.455 ** 2 - x * x - z * z)) + r * 0.15, z];
+      const on = (lx, ly, lz) => { const v = rot([lx * r, ly * 1.35 * r, lz * 1.05 * r]); return [c[0] + v[0], c[1] + v[1], c[2] + v[2]]; };
+      at(mb, c, ax([1, 0, 0], TH), [1, 1.35, 1.05]); sphere(mb, r, skin, 18);
+      at(mb, on(0, 0.8, 0.66), ax([1, 0, 0], -0.42), [1, 0.85, 0.28]); sphere(mb, r * 0.62, nail, 14);
+      at(mb, on(0, -0.25, 1.0)); capsuleX(mb, 0.007, r * 0.42, crease, 5); // knuckle crease
+      if (k === 0) for (const [dx, a] of [[-0.35, 0.5], [0, -0.25], [0.32, 0.25]]) { at(mb, on(dx, 0.2, 1.0), ax([0, 0, 1], Math.PI / 2 + a)); capsuleX(mb, 0.005, 0.045, { c: C('#5b3a28') }, 4); } // big-toe hairs
+    });
+    // knuckle creases across the top of the foot (the forehead) and the ball of the foot
+    for (const y of [-0.13, -0.17]) { at(mb, [0, 0, 0]); tube(mb, curve((t) => onShell(-0.16 + t * 0.32, y + Math.sin(t * Math.PI) * 0.012, 0.458), 12), 0.007, crease, 5); }
+    // a plaster on the side
+    at(mb, [-0.405, -0.47, 0.13], ax([0, 1, 0], -1.27)); roundBox(mb, [0.07, 0.03, 0.01], 0.012, { c: C('#e8b98d') });
+    at(mb, [-0.412, -0.47, 0.135], ax([0, 1, 0], -1.27)); roundBox(mb, [0.026, 0.024, 0.008], 0.008, { c: C('#f5dcc0') });
+    // stripy ankle sock
+    at(mb, [0, -0.7, 0]); cylinder(mb, 0.47, 0.11, { c: C('#ffffff'), c2: C('#ff5a5a'), mat: MAT.flagcloth, uv: (p) => [0, p[1] * 28] }, 48, 0.02);
+    at(mb, [0, -0.645, 0]); torus(mb, 0.47, 0.03, { c: C('#ffffff'), c2: C('#e6e6ef'), mat: MAT.flagcloth, uv: (p) => [0, Math.atan2(p[2], p[0]) * 14] }, 48, 8);
+  }));
+  // 43 heist mask (EXCLUSIVE, code "BIGHEIST-5082") — a glossy white face mask with sly slanted eye holes, a painted
+  // grin with one gold tooth and red cheek stripes, held on by a strap, under a black knitted cap with a gold coin
+  H.push(mk((mb) => {
+    const white = { c: C('#fbf8f2') }, ink = { c: C('#241a33') }, red = { c: C('#e8333f') };
+    const eyes = [[-0.11, -0.32, 0.36], [0.11, -0.32, -0.36]]; // x, y, slant
+    const inEye = (x, y) => eyes.some(([ex, ey, sl]) => { const dx = x - ex, dy = y - ey, c = Math.cos(sl), s = Math.sin(sl), u = dx * c + dy * s, v = -dx * s + dy * c; return (u / 0.078) ** 2 + (v / 0.04) ** 2 < 1; });
+    const inMask = (x, y, z) => z > 0.1 && (x / 0.335) ** 2 + ((y + 0.4) / 0.25) ** 2 < 1;
+    at(mb, [0, 0, 0]); shell(mb, white, (x, y, z) => inMask(x, y, z) && !inEye(x, y), 0.47, -0.74, 30, 110);
+    at(mb, [0, 0, 0]); tube(mb, curve((t) => { const a = t * Math.PI * 2; return onShell(Math.sin(a) * 0.335, -0.4 + Math.cos(a) * 0.25, 0.47); }, 48), 0.014, { c: C('#d9d2c4') }, 6);
+    for (const [ex, ey, sl] of eyes) { at(mb, [0, 0, 0]); tube(mb, curve((t) => { const a = t * Math.PI * 2, u = Math.sin(a) * 0.078, v = Math.cos(a) * 0.04, c = Math.cos(sl), s = Math.sin(sl); return onShell(ex + u * c - v * s, ey + u * s + v * c, 0.472); }, 30), 0.011, ink, 6); }
+    // painted grin with tooth lines and one gold tooth
+    const grin = (t) => { const x = -0.14 + t * 0.28; return onShell(x, -0.5 + (x / 0.14) ** 2 * 0.045, 0.474); };
+    at(mb, [0, 0, 0]); tube(mb, curve(grin, 20), 0.012, ink, 6);
+    at(mb, [0, 0, 0]); tube(mb, curve((t) => { const p = grin(0.12 + t * 0.76); return [p[0], p[1] - 0.035 + Math.sin(t * Math.PI) * 0.0, p[2] - 0.004]; }, 16), 0.009, ink, 6);
+    for (let k = 1; k < 6; k++) { const p = grin(0.12 + (k / 6) * 0.76); at(mb, [p[0], p[1] - 0.018, p[2] + 0.002]); roundBox(mb, [0.003, 0.016, 0.004], 0.002, ink); }
+    { const p = grin(0.62); at(mb, [p[0] + 0.012, p[1] - 0.018, p[2] + 0.004]); roundBox(mb, [0.016, 0.014, 0.006], 0.004, { c: C('#ffd23f'), mat: MAT.gold }); }
+    for (const sx of [-1, 1]) for (const dy of [0, -0.035]) { const p = onShell(sx * 0.22, -0.43 + dy, 0.473); at(mb, p, qm(ax([0, 1, 0], Math.atan2(p[0], p[2])), ax([0, 0, 1], sx * 0.25))); roundBox(mb, [0.045, 0.008, 0.006], 0.005, red); }
+    // strap round the back
+    at(mb, [0, 0, 0]); tube(mb, curve((t) => { const a = Math.PI * (0.34 + t * 1.32); return [Math.sin(a) * 0.42, -0.4, Math.cos(a) * 0.42]; }, 30), 0.022, ink, 6);
+    // black knitted beanie (snug, a bit slouchy) with a rolled cuff over the top of the mask and a gold coin badge
+    at(mb, [0, 0.051, 0], [0, 0, 0, 1], [1, 1.3, 1]); shell(mb, { c: C('#2a2338'), c2: C('#3b3350'), mat: MAT.flagcloth, uv: (p) => [0, Math.atan2(p[2], p[0]) * 10] }, (x, y) => y > -0.147, 0.43, -0.74, 26, 80);
+    at(mb, [0, -0.14, 0]); torus(mb, 0.363, 0.042, { c: C('#3b3350'), c2: C('#4a4163'), mat: MAT.flagcloth, uv: (p) => [0, Math.atan2(p[2], p[0]) * 18] }, 56, 10);
+    const n = [0, 0.656, 0.755];
+    at(mb, [0, -0.05 + n[1] * 0.012, 0.285 + n[2] * 0.012], ax([1, 0, 0], 0.855)); cylinder(mb, 0.05, 0.014, { c: C('#ffd23f'), mat: MAT.gold }, 22, 0.006);
+    at(mb, [0, -0.05 + n[1] * 0.024, 0.285 + n[2] * 0.024], ax([1, 0, 0], -0.715)); roundBox(mb, [0.008, 0.028, 0.004], 0.004, { c: C('#c79a10'), mat: MAT.gold });
+  }));
   return H;
 }
 
@@ -2858,8 +2916,8 @@ __m["shared/config.js"] = (() => {
 // CranGuys — shared constants. Changing PROTO forces clients and server to match.
 
 const PROTO = 3;
-// filled in by tools/build.js with a fingerprint of the code ('5617dd1b89' when running unbundled)
-const BUILD = '5617dd1b89';
+// filled in by tools/build.js with a fingerprint of the code ('580341b4c5' when running unbundled)
+const BUILD = '580341b4c5';
 // what peer-to-peer players must match exactly to play together
 const NETV = PROTO + ':' + BUILD;
 const GAME_NAME = 'CranGuys';
@@ -8396,6 +8454,7 @@ __m["client/js/ads.js"] = (() => {
 //   end screen beside the card; if there isn't room on a small screen there's simply no ad.
 //
 // To switch ads off, set ADS_ON to false.
+const { BUILD } = __m["shared/config.js"];
 const ADS_ON = true;
 const AD_KEY = '55090921d91859c8ea8fcac9a1f56edc';
 const AD_SRC = 'https://bauval.org/21/' + AD_KEY;
@@ -8407,17 +8466,32 @@ const allowed = () => {
   const h = location.hostname;
   return AD_HOSTS.some((d) => h === d || h.endsWith('.' + d));
 };
-const adDoc = (src) => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<base target="_blank"><style>html,body{margin:0;padding:0;background:transparent;overflow:hidden;font-family:system-ui,-apple-system,sans-serif}</style>
-<script>(() => { const o = window.open; window.open = function () { const u = navigator.userActivation; return u && !u.isActive ? null : o.apply(window, arguments); }; })(); /* new tabs only when the ad itself is tapped */<\/script>
-</head><body>
-<script async="async" data-cfasync="false" src="${src}"><\/script>
-<div id="container-${AD_KEY}"></div>
-</body></html>`;
+// The ad runs in a frame that loads this same page with ?cgad=1, so the ad script sees your real github.io address
+// (Adsterra checks it). In that frame the game never starts: runAdFrame() swaps the page for just the ad tag.
+const isAdFrame = () => typeof window !== 'undefined' && window.parent !== window && /[?&]cgad=1\b/.test(location.search);
+function runAdFrame() {
+  const d = document;
+  for (const e of d.querySelectorAll('link[rel="stylesheet"], style')) e.remove();
+  d.documentElement.removeAttribute('class'); d.documentElement.style.cssText = 'margin:0;padding:0;background:transparent';
+  d.body.removeAttribute('class');
+  d.body.style.cssText = 'margin:0;padding:0;background:transparent;overflow:hidden;font-family:system-ui,-apple-system,sans-serif';
+  d.body.innerHTML = `<div id="container-${AD_KEY}"></div>`;
+  const base = d.createElement('base'); base.target = '_blank'; d.head.prepend(base); // ad links open in a new tab
+  const open = window.open; // new tabs only when the ad itself is tapped
+  window.open = function () { const u = navigator.userActivation; return u && !u.isActive ? null : open.apply(window, arguments); };
+  window.__ad = { state: 'loading the ad script…' };
+  const sc = d.createElement('script'); // the Adsterra tag, exactly as given: the script, then its container
+  sc.async = true; sc.setAttribute('data-cfasync', 'false'); sc.src = window.CG_AD_SRC || AD_SRC;
+  sc.onload = () => { window.__ad.state = 'ad script loaded'; };
+  sc.onerror = () => { window.__ad.state = 'ad script BLOCKED or failed to load (ad blocker / VPN / school filter?)'; };
+  d.body.insertBefore(sc, d.body.firstChild);
+}
 
 class Ads {
   constructor(root) {
     this.on = ADS_ON && allowed();
+    this.dbg = /[?&]addebug/.test(location.search); this.why = '';
+    if (this.dbg) { this.panel = document.createElement('div'); this.panel.className = 'ad-debug'; root.appendChild(this.panel); setInterval(() => this.debug(), 1000); }
     this.root = root; this.slot = null; this.box = null; this.frame = null; this.h = 0; this.ro = null; this.fw = 300;
     if (!this.on) return;
     this.timer = setInterval(() => this.place(), 1000); // follows layout changes (mode switch, rotate, safety rules closing…)
@@ -8440,11 +8514,12 @@ class Ads {
     // no allow-top-navigation (can't redirect the game), no allow-modals (no fake "virus" alerts), no allow-downloads
     f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox');
     f.style.width = this.fw + 'px';
-    f.srcdoc = adDoc(window.CG_AD_SRC || AD_SRC);
+    f.src = location.pathname + '?cgad=1';
     f.addEventListener('load', () => {
       try {
         const b = f.contentDocument.body, fit = () => { const h = Math.ceil(b.scrollHeight); if (h !== this.h) { this.h = h; this.place(); } };
         this.ro = new ResizeObserver(fit); this.ro.observe(b); fit();
+        this.loaded = true; this.debug();
       } catch (e) { /* the frame went away */ }
     });
     box.lastChild.appendChild(f);
@@ -8454,7 +8529,15 @@ class Ads {
   destroy() {
     if (this.ro) this.ro.disconnect();
     if (this.box) this.box.remove();
-    this.box = this.frame = this.ro = null; this.h = 0;
+    this.box = this.frame = this.ro = null; this.h = 0; this.loaded = false;
+  }
+  // ?addebug=1: a little panel saying what the ad is doing (and why it isn't showing)
+  debug() {
+    if (!this.panel) return;
+    let st = '—'; try { st = this.frame && this.frame.contentWindow && this.frame.contentWindow.__ad ? this.frame.contentWindow.__ad.state : this.frame ? 'frame loading…' : 'no ad frame'; } catch (e) { st = '?'; }
+    const rows = [['build', BUILD], ['site', location.hostname + (allowed() ? ' ✓ approved' : ' ✗ not github.io → ads off')], ['ads switch', ADS_ON ? 'on' : 'OFF'],
+      ['screen', this.slot || 'none (in a show)'], ['ad', st], ['ad height', this.h + 'px'], ['showing', this.box && this.box.classList.contains('show') ? 'YES' : 'no — ' + (this.why || '…')]];
+    this.panel.innerHTML = '<b>Ad debug</b>' + rows.map(([k, v]) => `<div><i>${k}</i> ${String(v).replace(/</g, '&lt;')}</div>`).join('');
   }
   // the free rectangle the ad may use (it never covers a button), or null if there's no room on this screen
   region() {
@@ -8483,8 +8566,9 @@ class Ads {
     return null;
   }
   place() {
-    if (!this.on) return;
+    if (!this.on) { this.why = 'ads are off on this site'; return; }
     const R = this.slot && this.slot !== 'park' ? this.region() : null, PAD = 18, TAG = 16;
+    this.why = !this.slot || this.slot === 'park' ? 'not an ad screen' : !R ? (document.querySelector('#safety.show') ? 'safety rules still up' : 'no free space on this screen size') : '';
     if (R) { const fw = Math.round(R.w - PAD); if (fw !== this.fw) { this.fw = fw; if (this.frame) this.frame.style.width = fw + 'px'; } }
     if (!this.box) {
       // only load an ad once there's somewhere visible for it, and you've stayed on the screen for a moment
@@ -8496,6 +8580,7 @@ class Ads {
     // shrink a tall ad to fit (down to 60%) rather than covering anything; no room or nothing loaded → no box
     const sc = R && this.h > 0 ? Math.min(1, (R.h - PAD - TAG) / this.h) : 0;
     const show = !!R && this.h >= 40 && sc >= 0.6;
+    if (R && !show) this.why = this.h < 40 ? 'nothing loaded in the ad yet (no ad, or it was blocked)' : `ad too tall (${this.h}px for ${Math.round(R.h)}px of space) — set the Native Banner to 1 row of 2 ads`;
     this.box.classList.toggle('show', show);
     if (!show) return;
     const bw = Math.round(this.fw * sc + PAD), x = R.align === 'right' ? R.x + R.w - bw : R.align === 'center' ? R.x + (R.w - bw) / 2 : R.x;
@@ -8505,7 +8590,7 @@ class Ads {
   }
 }
 
-return { ADS_ON, Ads };
+return { ADS_ON, isAdFrame, runAdFrame, Ads };
 })();
 
 // ---- client/js/ui.js ----
@@ -8527,7 +8612,7 @@ const { Ads } = __m["client/js/ads.js"];
 const OWNER_TAG = '<span class="otag"><i class="fa-solid fa-gem"></i>OWNER</span>';
 const passLevelOf = (id) => +(Object.keys(PASS_ITEMS).find((k) => PASS_ITEMS[k] === id) || 0);
 
-const HAT_EMOJI = ['⛔', '🥳', '👑', '🐰', '🧢', '😇', '🎩', '🚧', '🪖', '👨‍🍳', '🍒', '📡', '🌼', '🧶', '🏴‍☠️', '🎧', '👷', '🥷', '🦖', '🛡️', '🚵', '🦸', '🪽', '🐸', '🧙', '🍨', '🃏', '🦄', '🍄', '🎃', '🎓', '🦆', '🛸', '🎨', '🤠', '👒', '🎅', '🦌', '🤘', '🎀', '💐', '🐱'];
+const HAT_EMOJI = ['⛔', '🥳', '👑', '🐰', '🧢', '😇', '🎩', '🚧', '🪖', '👨‍🍳', '🍒', '📡', '🌼', '🧶', '🏴‍☠️', '🎧', '👷', '🥷', '🦖', '🛡️', '⛷️', '🦸', '🪽', '🐸', '🧙', '🍨', '🃏', '🦄', '🍄', '🎃', '🎓', '🦆', '🛸', '🎨', '🤠', '👒', '🎅', '🦌', '🤘', '🎀', '💐', '🐱', '🦶', '💰'];
 const TYPE = { race: { label: 'RACE', icon: 'fa-flag-checkered', col: '#22c8ff' }, hunt: { label: 'HUNT', icon: 'fa-bullseye', col: '#22c48a' }, race2: { label: 'RACE', icon: 'fa-rotate', col: '#1fb5c9' }, survival: { label: 'SURVIVAL', icon: 'fa-shapes', col: '#ff2e88' }, final: { label: 'FINAL', icon: 'fa-crown', col: '#ffb300' }, lobby: { label: 'LOBBY', icon: 'fa-umbrella-beach', col: '#a66bff' } };
 const TIPS = [
   'Dive (Ctrl / DIVE) to belly-flop under high sweepers.', 'Hold GRAB at a wall’s edge to climb up ledges.', 'Not every door breaks — follow the crowd!',
@@ -9805,8 +9890,11 @@ const PROMOS = {
   '12tqbeo': { items: ['h_balaclava', 't_owner'], title: 'Owner pack', note: 'You’re the owner! An OWNER tag now shows next to your name in every lobby — and here’s an exclusive pink balaclava.' },
   '1uu26vv': { items: ['h_dino', 'c_dino'], title: 'Dino Jay', wear: { color: 'c_dino', color2: 'c_lime', pattern: 'p_fade', face: 'f_happy', hat: 'h_dino' }, note: 'Rawr! Dino Jay is yours: an exclusive dino hood with spikes and teeth, plus Dino Green.' },
   '15850b1': { items: ['h_knight'], title: 'Golden Knight Helmet', note: 'Arise, Sir Bean! A shining golden knight helmet with an eye slit and a red plume — promo code only.' },
-  aw5ghx: { items: ['h_bikehelmet'], title: 'Full-Face Bike Helmet', note: 'Send it! A full-face downhill helmet with a visor and chin guard — promo code only.' },
+  aw5ghx: { items: ['h_bikehelmet'], title: 'White Ski Mask', note: 'Fresh powder! A snowy-white knitted ski mask with ice-blue stripes and a snowflake badge — promo code only.' },
   kaqxn1: { items: ['h_cape'], title: 'Royal Red Cape', note: 'A royal red velvet cape, tied round your neck with a bow and a gold-trimmed collar. Promo code only.' },
+  '93nqej': { items: ['h_balaclava'], title: 'Pink Balaclava', note: 'The pink balaclava — knitted, full-face, with eye and mouth holes. Promo code only.' },
+  '148fu86': { items: ['h_footface'], title: 'Foot Face', note: 'Your head is now a foot. Toes, toenails, a plaster and an ankle sock. You’re welcome.' },
+  p2d1l: { items: ['h_heist'], title: 'Heist Mask', note: 'A sly white mask with a painted grin and a gold tooth, under a black cap. Promo code only.' },
   // the ten "secret" codes
   '1fgrwze': { items: ['h_frog'], title: 'Frog Hat', note: 'Ribbit! A goggle-eyed frog hat. Only ten secret codes exist — this is one.' },
   vpmwuu: { items: ['h_witch'], title: 'Witch Hat', note: 'A crooked witch hat with a buckle. Secret code only!' },
@@ -9988,6 +10076,7 @@ const { Sound } = __m["client/js/audio.js"];
 const { Input } = __m["client/js/input.js"];
 const { Cam } = __m["client/js/camera.js"];
 const { UI } = __m["client/js/ui.js"];
+const { isAdFrame, runAdFrame } = __m["client/js/ads.js"];
 const { ClientGame } = __m["client/js/play.js"];
 const { RemoteConn, LocalServer } = __m["client/js/net.js"];
 const { P2PHost, P2PClient, findPublicRoom, newCode, cleanCode, p2pSupported, lbFetch, lbPublish, Presence, recFetch, recPublish, REC_MAPS } = __m["client/js/p2p.js"];
@@ -10901,9 +10990,12 @@ class App {
   }
 }
 
-const app = new App();
-window.CG = app; // debug / test hook
-app.boot();
+if (isAdFrame()) runAdFrame(); // this page is only the little ad frame on the menu: show the ad, don't start the game
+else {
+  const app = new App();
+  window.CG = app; // debug / test hook
+  app.boot();
+}
 
 return {  };
 })();
