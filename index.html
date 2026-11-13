@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="cg-build" content="a3bcf1b0f5">
+<meta name="cg-build" content="5617dd1b89">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -821,6 +821,13 @@ body.intro-on #duelBoard, body.intro-on #hCounter, body.intro-on #hCrown, body.i
 .lb.recs .rect { align-items: flex-end; } .lb.recs .rect b { width: auto; font-size: 18px; }
 .lb.recs .recmap b { width: auto; color: var(--ink); font-family: var(--font); }
 
+/* ---------- ads (menu + end screen only; see client/js/ads.js) ---------- */
+.ad-box { position: absolute; left: -9999px; top: 0; visibility: hidden; pointer-events: none; background: rgba(255,255,255,.95); border: 3px solid var(--ink); border-radius: 14px; padding: 16px 6px 6px; box-shadow: 0 4px 0 var(--ink); box-sizing: border-box; }
+#ui > .ad-box.show, #ui > .ad-box.show iframe { visibility: visible; pointer-events: auto; }
+.ad-box .ad-tag { position: absolute; left: 8px; top: 1px; font: 800 10px/14px var(--font, system-ui); letter-spacing: 1px; text-transform: uppercase; color: #7a6a99; }
+.ad-clip { overflow: hidden; border-radius: 8px; }
+.ad-box iframe { display: block; border: 0; transform-origin: 0 0; background: transparent; }
+
 </style>
 </head>
 <body>
@@ -1011,7 +1018,7 @@ body.intro-on #duelBoard, body.intro-on #hCounter, body.intro-on #hCrown, body.i
   <div id="nogl" class="screen"><div class="card"><h2>WebGL2 needed</h2><p>CranGuys needs WebGL2. Please open it in Safari 15+, Chrome or Firefox.</p></div></div>
 </div>
 <script>
-/* CranGuys bundle — 47 modules — build a3bcf1b0f5 */
+/* CranGuys bundle — 48 modules — build 5617dd1b89 */
 (() => {
 'use strict';
 const __m = {};
@@ -2851,8 +2858,8 @@ __m["shared/config.js"] = (() => {
 // CranGuys — shared constants. Changing PROTO forces clients and server to match.
 
 const PROTO = 3;
-// filled in by tools/build.js with a fingerprint of the code ('a3bcf1b0f5' when running unbundled)
-const BUILD = 'a3bcf1b0f5';
+// filled in by tools/build.js with a fingerprint of the code ('5617dd1b89' when running unbundled)
+const BUILD = '5617dd1b89';
 // what peer-to-peer players must match exactly to play together
 const NETV = PROTO + ':' + BUILD;
 const GAME_NAME = 'CranGuys';
@@ -8374,6 +8381,133 @@ function passClaimable(xp, claimed, owned) {
 return { PASS_SHOWN, PASS_ITEMS, passReward, passClaimable };
 })();
 
+// ---- client/js/ads.js ----
+__m["client/js/ads.js"] = (() => {
+// Ads (Adsterra Native Banner) — kept well away from gameplay.
+//
+// * Only on the main menu and on the end-of-show / "you're out" screen. Never in a round, the lobby, the
+//   podium, the Locker, Shop or Pass. When a show starts the ad is deleted (its code stops running) and a fresh
+//   one is loaded next time you're back on the menu.
+// * Only on the site Adsterra approved (your github.io address) — never in local tests or the claude.ai copy.
+// * The ad runs inside its own frame: it can't redirect the game tab, pop up alerts or start downloads, links
+//   open in a new tab, and taps on the game never reach it. Nothing shows at all if the ad doesn't load (ad
+//   blocker, school filter, no fill), so there's never an empty box.
+// * It never covers a button: on the menu it sits in the free space top-right (above the PLAY corner), on the
+//   end screen beside the card; if there isn't room on a small screen there's simply no ad.
+//
+// To switch ads off, set ADS_ON to false.
+const ADS_ON = true;
+const AD_KEY = '55090921d91859c8ea8fcac9a1f56edc';
+const AD_SRC = 'https://bauval.org/21/' + AD_KEY;
+const AD_HOSTS = ['github.io']; // the site(s) registered with Adsterra
+const GAP = 16;
+
+const allowed = () => {
+  if (typeof window.CG_AD_SRC === 'string') return true; // test hook
+  const h = location.hostname;
+  return AD_HOSTS.some((d) => h === d || h.endsWith('.' + d));
+};
+const adDoc = (src) => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<base target="_blank"><style>html,body{margin:0;padding:0;background:transparent;overflow:hidden;font-family:system-ui,-apple-system,sans-serif}</style>
+<script>(() => { const o = window.open; window.open = function () { const u = navigator.userActivation; return u && !u.isActive ? null : o.apply(window, arguments); }; })(); /* new tabs only when the ad itself is tapped */<\/script>
+</head><body>
+<script async="async" data-cfasync="false" src="${src}"><\/script>
+<div id="container-${AD_KEY}"></div>
+</body></html>`;
+
+class Ads {
+  constructor(root) {
+    this.on = ADS_ON && allowed();
+    this.root = root; this.slot = null; this.box = null; this.frame = null; this.h = 0; this.ro = null; this.fw = 300;
+    if (!this.on) return;
+    this.timer = setInterval(() => this.place(), 1000); // follows layout changes (mode switch, rotate, safety rules closing…)
+    addEventListener('resize', () => this.place());
+  }
+  // slot: 'menu' | 'end' | 'park' (keep the ad loaded but hidden, e.g. in the Locker) | null (delete it)
+  set(slot) {
+    if (!this.on || slot === this.slot) return;
+    this.slot = slot; this.since = 0;
+    if (!slot) this.destroy();
+    this.place();
+  }
+  ensure() {
+    if (this.box) return;
+    const box = (this.box = document.createElement('div'));
+    box.className = 'ad-box'; box.setAttribute('aria-label', 'Advertisement');
+    box.innerHTML = '<span class="ad-tag">Ad</span><div class="ad-clip"></div>';
+    const f = (this.frame = document.createElement('iframe'));
+    f.title = 'Advertisement'; f.setAttribute('scrolling', 'no');
+    // no allow-top-navigation (can't redirect the game), no allow-modals (no fake "virus" alerts), no allow-downloads
+    f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox');
+    f.style.width = this.fw + 'px';
+    f.srcdoc = adDoc(window.CG_AD_SRC || AD_SRC);
+    f.addEventListener('load', () => {
+      try {
+        const b = f.contentDocument.body, fit = () => { const h = Math.ceil(b.scrollHeight); if (h !== this.h) { this.h = h; this.place(); } };
+        this.ro = new ResizeObserver(fit); this.ro.observe(b); fit();
+      } catch (e) { /* the frame went away */ }
+    });
+    box.lastChild.appendChild(f);
+    const modal = this.root.querySelector('#modal');
+    this.root.insertBefore(box, modal || null); // under pop-up windows, above the menu / end screen
+  }
+  destroy() {
+    if (this.ro) this.ro.disconnect();
+    if (this.box) this.box.remove();
+    this.box = this.frame = this.ro = null; this.h = 0;
+  }
+  // the free rectangle the ad may use (it never covers a button), or null if there's no room on this screen
+  region() {
+    const vw = innerWidth, vh = innerHeight;
+    const r = (sel) => { const e = document.querySelector(sel); return e && e.getClientRects().length ? e.getBoundingClientRect() : null; };
+    if (document.querySelector('#safety.show')) return null;
+    if (this.slot === 'menu') {
+      if (vw < 980 || document.body.classList.contains('subscreen')) return null;
+      const top = (r('#menu .topbar')?.bottom || 64) + GAP, play = r('#menu .playwrap');
+      const w = 320, x = vw - w - 16, np = r('#menu .nameplate');
+      const bottom = (play ? play.top : vh - 220) - GAP;
+      if (np && np.right + GAP > x && np.bottom > top && np.top < bottom) return null;
+      return { x, y: top, w, h: bottom - top, align: 'right' };
+    }
+    if (this.slot === 'end') {
+      const card = document.querySelector('#rewards .rw-card'); if (!card) return null;
+      const cw = card.offsetWidth, ch = card.offsetHeight, cl = (vw - cw) / 2, ct = Math.max(GAP, (vh - ch) / 2);
+      // to the right of the card, level with its top (well away from its buttons) and clear of the menu's top bar
+      // and PLAY corner showing dimmed behind it; the side tabs are on the left, so never there
+      const side = vw - (cl + cw) - 24 - GAP, top = Math.max(ct, (r('#menu .topbar')?.bottom || 64) + GAP);
+      const play = r('#menu .playwrap'), bottom = (play && play.left < vw - GAP - side ? play.top : vh) - GAP;
+      if (side >= 230) { const w = Math.min(320, side); return { x: cl + cw + 24, y: top, w, h: bottom - top, align: 'left' }; }
+      const below = vh - (ct + ch) - 24 - GAP;
+      if (below >= 120) { const w = Math.min(340, vw - 2 * GAP); return { x: (vw - w) / 2, y: ct + ch + 24, w, h: below, align: 'center' }; }
+    }
+    return null;
+  }
+  place() {
+    if (!this.on) return;
+    const R = this.slot && this.slot !== 'park' ? this.region() : null, PAD = 18, TAG = 16;
+    if (R) { const fw = Math.round(R.w - PAD); if (fw !== this.fw) { this.fw = fw; if (this.frame) this.frame.style.width = fw + 'px'; } }
+    if (!this.box) {
+      // only load an ad once there's somewhere visible for it, and you've stayed on the screen for a moment
+      if (!R) { this.since = 0; return; }
+      if (!this.since) { this.since = performance.now(); setTimeout(() => this.place(), 700); return; }
+      if (performance.now() - this.since < 600) return;
+      this.ensure();
+    }
+    // shrink a tall ad to fit (down to 60%) rather than covering anything; no room or nothing loaded → no box
+    const sc = R && this.h > 0 ? Math.min(1, (R.h - PAD - TAG) / this.h) : 0;
+    const show = !!R && this.h >= 40 && sc >= 0.6;
+    this.box.classList.toggle('show', show);
+    if (!show) return;
+    const bw = Math.round(this.fw * sc + PAD), x = R.align === 'right' ? R.x + R.w - bw : R.align === 'center' ? R.x + (R.w - bw) / 2 : R.x;
+    Object.assign(this.box.style, { left: Math.round(x) + 'px', top: Math.round(R.y) + 'px', width: bw + 'px' });
+    const clip = this.box.lastChild; clip.style.width = Math.round(this.fw * sc) + 'px'; clip.style.height = Math.round(this.h * sc) + 'px';
+    Object.assign(this.frame.style, { height: this.h + 'px', transform: sc < 1 ? `scale(${sc})` : '' });
+  }
+}
+
+return { ADS_ON, Ads };
+})();
+
 // ---- client/js/ui.js ----
 __m["client/js/ui.js"] = (() => {
 // CranGuys — UI controller (DOM): menu, locker, shop, settings, account, lobby, HUD, banners, results, podium, rewards.
@@ -8388,6 +8522,7 @@ const { rankBadge } = __m["client/js/rankbadge.js"];
 const { cmCycle, cmPhase, CM_COLORS } = __m["shared/levels/colormatch.js"];
 const { crownAt } = __m["shared/levels/crownpeak.js"];
 const { PASS_ITEMS, PASS_SHOWN, passReward, passClaimable } = __m["shared/pass.js"];
+const { Ads } = __m["client/js/ads.js"];
 // the OWNER tag shown next to the name of whoever redeemed the owner code
 const OWNER_TAG = '<span class="otag"><i class="fa-solid fa-gem"></i>OWNER</span>';
 const passLevelOf = (id) => +(Object.keys(PASS_ITEMS).find((k) => PASS_ITEMS[k] === id) || 0);
@@ -8445,7 +8580,7 @@ const priceHTML = (p) => (p.c ? `<span class="price"><i class="fa-solid fa-crown
 class UI {
   constructor(app) {
     this.app = app; this.screen = null; this.lockerTab = 'color'; this.colorSlot = 'color'; this.feedItems = [];
-    this.tags = []; this.lobbyChips = new Map();
+    this.tags = []; this.lobbyChips = new Map(); this.ads = new Ads(document.getElementById('ui'));
     document.addEventListener('click', (e) => {
       const go = e.target.closest('[data-go]'); if (go) { this.app.sound.play('click'); this.app.goto(go.dataset.go); return; }
       const act = e.target.closest('[data-act]'); if (act) { this.app.sound.play('click'); this.action(act.dataset.act, act); }
@@ -8504,8 +8639,15 @@ class UI {
     if (id === 'locker') this.renderLocker();
     if (id === 'shop') this.renderShop();
     if (id === 'pass') this.renderPass(true);
+    this.adSync();
   }
-  overlay(id, on = true) { $('#' + id).classList.toggle('show', on); if (id === 'intro') document.body.classList.toggle('intro-on', !!on); }
+  overlay(id, on = true) { $('#' + id).classList.toggle('show', on); if (id === 'intro') document.body.classList.toggle('intro-on', !!on); if (id === 'rewards') this.adSync(); }
+  // ads only on the main menu and the end-of-show screen (kept loaded but hidden in the Locker / Shop / Pass,
+  // deleted as soon as a show starts)
+  adSync() {
+    const id = this.screen, sub = id === 'locker' || id === 'shop' || id === 'pass';
+    this.ads.set($('#rewards').classList.contains('show') ? 'end' : id === 'menu' ? 'menu' : sub ? 'park' : null);
+  }
   hideOverlay(id) { this.overlay(id, false); }
   updateReady() {
     if (document.getElementById('updPill')) return;
